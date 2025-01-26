@@ -1,0 +1,97 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode
+build/
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+DerivedData/
+*.xccheckout
+*.moved-aside
+*.xcsettings
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/xcshareddata/**/*
+!*.xcodeproj/xcuserdata/
+
+# Swift Package Manager
+.build/
+.swiftpm/xcode/
+.swiftpm/configuration/
+
+# CocoaPods
+Pods/
+Podfile.lock
+*.xcconfig
+!default.xcconfig
+
+# Carthage
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output/
+
+# Flutter specific
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-version
+.vscode/
+.idea/
+
+# Temporary files
+*.swp
+*.lock
+*.tmp
+*.log
+
+# Archives
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.xcarchive
+
+# Symbolication
+*.bcsymbolmap
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# SwiftLint
+.swiftlint.yml
+
+# Environment variables
+.env
+
+# Bundler
+.bundle/
+
+# Custom build scripts
+*.sh
+
+# Unit test results
+*.xresult
+
+# Xcode Server
+*.xccovreport
+*.xccovarchive
+
+# Simulator generated files
+*.simdevicelog
+
+# Code Coverage
+*.gcda
+*.gcno
+*.info
+
+# IDE Preferences
+.idea/
+*.iml
+
