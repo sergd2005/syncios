@@ -12,8 +12,24 @@ import SwiftGit2
 struct SynciOSApp: App {
     
     init() {
-        let URL = URL(string: "")!
-        let result = Repository.at(URL)
+        let repoFolderPath = NSHomeDirectory()+"/repo"
+        let repoGitFolderPath = repoFolderPath + "/.git"
+        
+        guard let remoteUrl = URL(string: "https://github.com/sergd2005/syncdata.git"),
+              let localUrl = URL(string: repoFolderPath) else {
+            print("urls creation failed")
+            return
+        }
+
+        var result: Result<Repository, NSError>?
+        if FileManager.default.fileExists(atPath: repoGitFolderPath) {
+            result = Repository.at(localUrl)
+        } else {
+            result = Repository.clone(from: remoteUrl, to: localUrl)
+        }
+        
+        guard let result else { return }
+        
         switch result {
         case let .success(repo):
             let latestCommit = repo

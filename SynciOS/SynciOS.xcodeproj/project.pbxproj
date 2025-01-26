@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		85C45EC02D45BB390004FD9A /* SwiftGit2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 85C45EB52D45BB300004FD9A /* SwiftGit2.framework */; };
-		85C45EC12D45BB390004FD9A /* SwiftGit2.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 85C45EB52D45BB300004FD9A /* SwiftGit2.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		85C45F132D46F2680004FD9A /* SwiftGit2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 85C45F082D46F22A0004FD9A /* SwiftGit2.framework */; };
+		85C45F142D46F2680004FD9A /* SwiftGit2.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 85C45F082D46F22A0004FD9A /* SwiftGit2.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,7 +26,7 @@
 			remoteGlobalIDString = 85C45E4C2D458D910004FD9A;
 			remoteInfo = SynciOS;
 		};
-		85C45EB42D45BB300004FD9A /* PBXContainerItemProxy */ = {
+		85C45F072D46F22A0004FD9A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 85C45EA22D45BB2F0004FD9A /* SwiftGit2.xcodeproj */;
 			proxyType = 2;
@@ -42,7 +42,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				85C45EC12D45BB390004FD9A /* SwiftGit2.framework in Embed Frameworks */,
+				85C45F142D46F2680004FD9A /* SwiftGit2.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -53,7 +53,7 @@
 		85C45E4D2D458D910004FD9A /* SynciOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SynciOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		85C45E5D2D458D970004FD9A /* SynciOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SynciOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		85C45E672D458D970004FD9A /* SynciOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SynciOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		85C45EA22D45BB2F0004FD9A /* SwiftGit2.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SwiftGit2.xcodeproj; path = /Users/sergiid/Desktop/SwiftGit2/SwiftGit2.xcodeproj; sourceTree = "<absolute>"; };
+		85C45EA22D45BB2F0004FD9A /* SwiftGit2.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SwiftGit2.xcodeproj; path = /Users/sergiid/Desktop/ProjectSync/SwiftGit2/SwiftGit2.xcodeproj; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -79,7 +79,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				85C45EC02D45BB390004FD9A /* SwiftGit2.framework in Frameworks */,
+				85C45F132D46F2680004FD9A /* SwiftGit2.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -129,10 +129,10 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		85C45EA52D45BB300004FD9A /* Products */ = {
+		85C45EF82D46F2290004FD9A /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				85C45EB52D45BB300004FD9A /* SwiftGit2.framework */,
+				85C45F082D46F22A0004FD9A /* SwiftGit2.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -246,7 +246,7 @@
 			projectDirPath = "";
 			projectReferences = (
 				{
-					ProductGroup = 85C45EA52D45BB300004FD9A /* Products */;
+					ProductGroup = 85C45EF82D46F2290004FD9A /* Products */;
 					ProjectRef = 85C45EA22D45BB2F0004FD9A /* SwiftGit2.xcodeproj */;
 				},
 			);
@@ -260,11 +260,11 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
-		85C45EB52D45BB300004FD9A /* SwiftGit2.framework */ = {
+		85C45F082D46F22A0004FD9A /* SwiftGit2.framework */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.framework;
 			path = SwiftGit2.framework;
-			remoteRef = 85C45EB42D45BB300004FD9A /* PBXContainerItemProxy */;
+			remoteRef = 85C45F072D46F22A0004FD9A /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
