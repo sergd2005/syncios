@@ -49,7 +49,7 @@ struct SynciOSApp: App {
                 let fetchResult = repo.fetch(remote)
                 switch fetchResult {
                 case .success():
-                    repo.merge()
+                    print("merge result: \(repo.merge(commit: "26be6a1"))")
                 case .failure(let error):
                     print(error)
                 }
