@@ -12,11 +12,11 @@ import SwiftGit2
 struct SynciOSApp: App {
     
     init() {
-        let repoFolderPath = NSHomeDirectory()+"/repo"
-        let repoGitFolderPath = repoFolderPath + "/.git"
-        
-        guard let remoteUrl = URL(string: "https://github.com/sergd2005/syncdata.git"),
-              let localUrl = URL(string: repoFolderPath) else {
+        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let localUrl = documentsDirectory.appendingPathComponent("repo")
+        let repoGitFolderPath = localUrl.path + "/.git"
+        print(repoGitFolderPath)
+        guard let remoteUrl = URL(string: "https://github.com/sergd2005/syncdata.git") else {
             print("urls creation failed")
             return
         }
@@ -37,15 +37,25 @@ struct SynciOSApp: App {
                 .flatMap {
                     repo.commit($0.oid)
                 }
-
             switch latestCommit {
-            case let .success(commit):
-                print("Latest Commit: \(commit.message) by \(commit.author.name)")
-
-            case let .failure(error):
-                print("Could not get commit: \(error)")
+            case .success(let commit):
+                print(commit)
+            case .failure(let error):
+                print(error)
             }
-
+            let remoteResult = repo.remote(named: "origin")
+            switch remoteResult {
+            case .success(let remote):
+                let fetchResult = repo.fetch(remote)
+                switch fetchResult {
+                case .success():
+                    repo.merge()
+                case .failure(let error):
+                    print(error)
+                }
+            case .failure(let error):
+                print(error)
+            }
         case let .failure(error):
             print("Could not open repository: \(error)")
         }
