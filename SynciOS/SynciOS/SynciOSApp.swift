@@ -32,24 +32,32 @@ struct SynciOSApp: App {
         
         switch result {
         case let .success(repo):
-            let latestCommit = repo
-                .HEAD()
-                .flatMap {
-                    repo.commit($0.oid)
-                }
-            switch latestCommit {
-            case .success(let commit):
-                print(commit)
-            case .failure(let error):
-                print(error)
-            }
             let remoteResult = repo.remote(named: "origin")
             switch remoteResult {
             case .success(let remote):
                 let fetchResult = repo.fetch(remote)
                 switch fetchResult {
                 case .success():
-                    print("merge result: \(repo.merge(commit: "26be6a1"))")
+                    let remoteBranchResult = repo.remoteBranch(named: "origin/main")
+                    switch remoteBranchResult {
+                    case .success(let remoteBranch):
+//                        print(repo.commit(remoteBranch.oid))
+                        print("merge result: \(repo.merge(commit: "\(remoteBranch.oid)"))")
+                        let latestCommit = repo
+                            .HEAD()
+                            .flatMap {
+                                repo.commit($0.oid)
+                            }
+                        switch latestCommit {
+                        case .success(let commit):
+                            print(commit)
+                        case .failure(let error):
+                            print(error)
+                        }
+                    case .failure(let error):
+                        print(error)
+                    }
+
                 case .failure(let error):
                     print(error)
                 }
