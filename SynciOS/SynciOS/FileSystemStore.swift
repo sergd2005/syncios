@@ -6,8 +6,9 @@
 //
 
 import CoreData
+import SwiftGit2
 
-enum FileSystemStoreError: Error {
+enum FileSystemIncrementalStoreError: Error {
     case invalidUrl
     case invalidFetchRequest
     case invalidFetchRequestEntity
@@ -15,6 +16,8 @@ enum FileSystemStoreError: Error {
     case undefinedEntityType
     case fileSystemNotInitialised
     case noContext
+    case wrongObjectID
+    case failedToParseObject
 }
 
 final class FileSystemManager {
@@ -25,8 +28,83 @@ final class FileSystemManager {
     }
     
     func allFileNames() throws -> [String] {
-        // TODO: Return actual contents of directory
-        return ["test.json"]
+        guard let dirEnum = FileManager.default.enumerator(atPath: folderURL.path) else {
+            return []
+        }
+        var result = [String]()
+        while let file = dirEnum.nextObject() as? String {
+            if file.hasSuffix(".json") {
+                result.append(file)
+            }
+        }
+        return result
+    }
+    
+    func parseJSONFile(name: String) throws -> [String: Any]? {
+        try JSONSerialization.jsonObject(with: try NSData(contentsOfFile: folderURL.path + "/" + name) as Data) as? [String: Any]
+    }
+}
+
+final class GitFileSystem {
+    private let folderURL: URL
+    
+    init(folderURL: URL) {
+        self.folderURL = folderURL
+    }
+    
+    func fetchLatestData() {
+        let repoGitFolderPath = folderURL.path + "/.git"
+        print(repoGitFolderPath)
+        guard let remoteUrl = URL(string: "https://github.com/sergd2005/syncdata.git") else {
+            print("urls creation failed")
+            return
+        }
+
+        var result: Result<Repository, NSError>?
+        if FileManager.default.fileExists(atPath: repoGitFolderPath) {
+            result = Repository.at(folderURL)
+        } else {
+            result = Repository.clone(from: remoteUrl, to: folderURL)
+        }
+        
+        guard let result else { return }
+        
+        switch result {
+        case let .success(repo):
+            let remoteResult = repo.remote(named: "origin")
+            switch remoteResult {
+            case .success(let remote):
+                let fetchResult = repo.fetch(remote)
+                switch fetchResult {
+                case .success():
+                    let remoteBranchResult = repo.remoteBranch(named: "origin/main")
+                    switch remoteBranchResult {
+                    case .success(let remoteBranch):
+                        print("merge result: \(repo.merge(commit: "\(remoteBranch.oid)"))")
+                        let latestCommit = repo
+                            .HEAD()
+                            .flatMap {
+                                repo.commit($0.oid)
+                            }
+                        switch latestCommit {
+                        case .success(let commit):
+                            print(commit)
+                        case .failure(let error):
+                            print(error)
+                        }
+                    case .failure(let error):
+                        print(error)
+                    }
+
+                case .failure(let error):
+                    print(error)
+                }
+            case .failure(let error):
+                print(error)
+            }
+        case let .failure(error):
+            print("Could not open repository: \(error)")
+        }
     }
 }
 
@@ -58,6 +136,7 @@ class CoreDataStack: ObservableObject {
 
 final class FileSystemIncrementalStore: NSIncrementalStore {
     private var fileSystemManager: FileSystemManager?
+    private var gitFileSystem: GitFileSystem?
     
     enum EntityType: String {
         case file = "SIFile"
@@ -66,6 +145,7 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
     private let uuid = UUID()
     
     static var type: NSPersistentStore.StoreType {
+        // TODO: get module name for store type
         NSPersistentStore.StoreType(rawValue: "SynciOS.\(Self.self)")
     }
     
@@ -80,23 +160,25 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
     // MARK: Init Store
     override func loadMetadata() throws {
         guard let storeURL = self.url else {
-            throw FileSystemStoreError.invalidUrl
+            throw FileSystemIncrementalStoreError.invalidUrl
         }
-        // TODO: get module name for store type
         let metadata = [NSStoreUUIDKey : uuid.uuidString, NSStoreTypeKey: Self.type.rawValue]
         self.metadata = metadata
         fileSystemManager = FileSystemManager(folderURL: storeURL)
+        gitFileSystem = GitFileSystem(folderURL: storeURL)
     }
     
     override func execute(_ request: NSPersistentStoreRequest, with context: NSManagedObjectContext?) throws -> Any {
-        guard let fileSystemManager else { throw FileSystemStoreError.fileSystemNotInitialised }
+        guard let fileSystemManager, let gitFileSystem else { throw FileSystemIncrementalStoreError.fileSystemNotInitialised }
         switch request.requestType {
         case .fetchRequestType:
-            guard let context else { throw FileSystemStoreError.noContext }
-            guard let fetchRequest = request as? NSFetchRequest<NSManagedObject> else { throw FileSystemStoreError.invalidFetchRequest }
-            guard let entity = fetchRequest.entity else { throw FileSystemStoreError.invalidFetchRequestEntity }
-            guard let entityName = entity.name else { throw FileSystemStoreError.emptyEntityName }
-            guard let entityType = EntityType(rawValue: entityName) else { throw FileSystemStoreError.undefinedEntityType }
+            guard let context else { throw FileSystemIncrementalStoreError.noContext }
+            guard let fetchRequest = request as? NSFetchRequest<NSManagedObject> else { throw FileSystemIncrementalStoreError.invalidFetchRequest }
+            guard let entity = fetchRequest.entity else { throw FileSystemIncrementalStoreError.invalidFetchRequestEntity }
+            guard let entityName = entity.name else { throw FileSystemIncrementalStoreError.emptyEntityName }
+            guard let entityType = EntityType(rawValue: entityName) else { throw FileSystemIncrementalStoreError.undefinedEntityType }
+            
+            gitFileSystem.fetchLatestData()
             
             switch entityType {
             case .file:
@@ -122,5 +204,17 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
             fatalError()
         }
         return []
+    }
+    
+    // MARK: Fulfilling Attribute Faults
+    override func newValuesForObject(with objectID: NSManagedObjectID, with context: NSManagedObjectContext) throws -> NSIncrementalStoreNode {
+        // TODO: fullfill key-values
+        guard let uid = referenceObject(for: objectID) as? String else {
+            throw FileSystemIncrementalStoreError.wrongObjectID
+        }
+        guard let jsonDict = try fileSystemManager?.parseJSONFile(name: uid) else {
+            throw FileSystemIncrementalStoreError.failedToParseObject
+        }
+        return NSIncrementalStoreNode(objectID: objectID, withValues: jsonDict, version: 0)
     }
 }

@@ -8,27 +8,61 @@
 import SwiftUI
 import CoreData
 
-struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-    
+struct FileViewModel: Identifiable {
+    let name: String
+    let contents: String
+    var id: String { name }
+}
+
+struct FileContentsView: View {
+    let fileViewModel: FileViewModel
+
     var body: some View {
         VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+            Text(fileViewModel.contents)
         }
-        .padding()
+    }
+}
+
+struct ContentView: View {
+    let coreDataStack: CoreDataStack
+    
+    @State var files: [FileViewModel] = []
+    
+    init(coreDataStack: CoreDataStack = CoreDataStack.shared) {
+        self.coreDataStack = coreDataStack
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(files) { file in
+                    NavigationLink(destination: FileContentsView(fileViewModel: file)) {
+                        Text(file.name)
+                    }
+                }
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+        }
         .onAppear() {
-            let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: FileSystemIncrementalStore.EntityType.file.rawValue)
-            let result = try? viewContext.fetch(fetchRequest) as? [SIFile]
-            if let result {
-                print(result)
+            coreDataStack.persistentContainer.performBackgroundTask { context in
+                let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: FileSystemIncrementalStore.EntityType.file.rawValue)
+                let result = try? context.fetch(fetchRequest) as? [SIFile]
+                if let result {
+                    files = result.map { FileViewModel(name: $0.name ?? "",
+                                                       contents: $0.contents ?? "") }
+                }
             }
         }
     }
 }
 
 #Preview {
-    ContentView()
+    ContentView(coreDataStack: .shared)
+}
+
+#Preview {
+    FileContentsView(fileViewModel: FileViewModel(name: "Test", contents: "aadfadfadfasdfasdfasd"))
 }
