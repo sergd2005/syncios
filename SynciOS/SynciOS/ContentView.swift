@@ -6,8 +6,11 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct ContentView: View {
+    @Environment(\.managedObjectContext) private var viewContext
+    
     var body: some View {
         VStack {
             Image(systemName: "globe")
@@ -16,6 +19,13 @@ struct ContentView: View {
             Text("Hello, world!")
         }
         .padding()
+        .onAppear() {
+            let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: FileSystemIncrementalStore.EntityType.file.rawValue)
+            let result = try? viewContext.fetch(fetchRequest) as? [SIFile]
+            if let result {
+                print(result)
+            }
+        }
     }
 }
 

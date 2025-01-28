@@ -7,11 +7,13 @@
 
 import SwiftUI
 import SwiftGit2
+import CoreData
 
 @main
 struct SynciOSApp: App {
+    @StateObject private var coreDataStack = CoreDataStack.shared
     
-    init() {
+    func fetchLatestData() {
         let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let localUrl = documentsDirectory.appendingPathComponent("repo")
         let repoGitFolderPath = localUrl.path + "/.git"
@@ -72,6 +74,8 @@ struct SynciOSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(\.managedObjectContext,
+                                              coreDataStack.persistentContainer.viewContext)
         }
     }
     
