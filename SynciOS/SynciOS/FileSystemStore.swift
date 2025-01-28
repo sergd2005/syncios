@@ -11,6 +11,7 @@ import SwiftGit2
 enum FileSystemIncrementalStoreError: Error {
     case invalidUrl
     case invalidFetchRequest
+    case invalidSaveChangesRequest
     case invalidFetchRequestEntity
     case emptyEntityName
     case undefinedEntityType
@@ -18,6 +19,12 @@ enum FileSystemIncrementalStoreError: Error {
     case noContext
     case wrongObjectID
     case failedToParseObject
+    case wrongObject
+    case fileNameIsNil
+}
+
+enum FileSystemManagerError: Error {
+    case fileExists
 }
 
 final class FileSystemManager {
@@ -42,6 +49,12 @@ final class FileSystemManager {
     
     func parseJSONFile(name: String) throws -> [String: Any]? {
         try JSONSerialization.jsonObject(with: try NSData(contentsOfFile: folderURL.path + "/" + name) as Data) as? [String: Any]
+    }
+    
+    func writeFile(name: String, data: [String: Any]) throws {
+        let filePath = folderURL.path + "/" + name + ".json"
+        guard !FileManager.default.fileExists(atPath: filePath) else { throw FileSystemManagerError.fileExists }
+        try (JSONSerialization.data(withJSONObject: data, options: .prettyPrinted) as NSData).write(toFile: filePath)
     }
 }
 
@@ -193,7 +206,34 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
             }
             
         case .saveRequestType:
-            ()
+            guard let saveRequest = request as? NSSaveChangesRequest else { throw FileSystemIncrementalStoreError.invalidSaveChangesRequest }
+            if let insertedObjects = saveRequest.insertedObjects {
+                for insertedObject in insertedObjects {
+                    guard let entityName = insertedObject.entity.name else { throw FileSystemIncrementalStoreError.emptyEntityName }
+                    guard let entityType = EntityType(rawValue: entityName) else { throw FileSystemIncrementalStoreError.undefinedEntityType }
+                    switch entityType {
+                    case .file:
+                        guard let sifile = insertedObject as? SIFile else { throw FileSystemIncrementalStoreError.wrongObject }
+                        guard let sifileName = sifile.name else { throw FileSystemIncrementalStoreError.fileNameIsNil }
+                        try fileSystemManager.writeFile(name: sifileName, data: ["name" : sifileName,
+                                                                                "contents" : sifile.contents ?? ""
+                                                                                ])
+                        // TODO: commit file
+                        // TODO: push
+                    }
+                }
+            }
+            if let updatedObjects = saveRequest.updatedObjects {
+                
+            }
+            if let deletedObjects = saveRequest.deletedObjects {
+                
+            }
+            if let optLockObjects = saveRequest.lockedObjects {
+                
+            }
+            
+            return [AnyObject]()
         case .batchInsertRequestType:
             ()
         case .batchUpdateRequestType:
@@ -208,7 +248,6 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
     
     // MARK: Fulfilling Attribute Faults
     override func newValuesForObject(with objectID: NSManagedObjectID, with context: NSManagedObjectContext) throws -> NSIncrementalStoreNode {
-        // TODO: fullfill key-values
         guard let uid = referenceObject(for: objectID) as? String else {
             throw FileSystemIncrementalStoreError.wrongObjectID
         }
@@ -217,4 +256,24 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
         }
         return NSIncrementalStoreNode(objectID: objectID, withValues: jsonDict, version: 0)
     }
+    
+    // TODO: support relationships
+    // TODO: separate contents into relationship object
+    
+    // TODO: Creating objects and saving objects
+    override func obtainPermanentIDs(for array: [NSManagedObject]) throws -> [NSManagedObjectID] {
+        var result = [NSManagedObjectID]()
+        for object in array {
+            guard let entityName = object.entity.name else { throw FileSystemIncrementalStoreError.emptyEntityName }
+            guard let entityType = EntityType(rawValue: entityName) else { throw FileSystemIncrementalStoreError.undefinedEntityType }
+            switch entityType {
+            case .file:
+                guard let sifile = object as? SIFile else { throw FileSystemIncrementalStoreError.wrongObject }
+                guard let sifileName = sifile.name else { throw FileSystemIncrementalStoreError.fileNameIsNil }
+                result.append(self.newObjectID(for: sifile.entity, referenceObject: sifileName))
+            }
+        }
+        return result
+    }
 }
+
