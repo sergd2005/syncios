@@ -49,7 +49,7 @@ struct ContentView: View {
             .toolbar {
                 Button("Add") {
                     coreDataStack.persistentContainer.performBackgroundTask { context in
-                        guard let newFile = NSEntityDescription.insertNewObject(forEntityName: "SIFile", into: context) as? SIFile else {
+                        guard let _ = NSEntityDescription.insertNewObject(forEntityName: "SIFile", into: context) as? SIFile else {
                             print("[ERROR] Failed to insert object")
                             return
                         }

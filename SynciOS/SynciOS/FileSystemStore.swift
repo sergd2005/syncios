@@ -25,6 +25,8 @@ enum FileSystemIncrementalStoreError: Error {
 
 enum FileSystemManagerError: Error {
     case fileExists
+    case failedToParseObject
+    case fileEmpty
 }
 
 final class FileSystemManager {
@@ -47,8 +49,13 @@ final class FileSystemManager {
         return result
     }
     
-    func parseJSONFile(name: String) throws -> [String: Any]? {
-        try JSONSerialization.jsonObject(with: try NSData(contentsOfFile: folderURL.path + "/" + name) as Data) as? [String: Any]
+    func parseJSONFile(name: String) throws -> [String: Any] {
+        guard let result = try JSONSerialization.jsonObject(with: try NSData(contentsOfFile: folderURL.path + "/" + name) as Data) as? [String: Any]
+        else {
+            throw FileSystemManagerError.failedToParseObject
+        }
+        guard !result.isEmpty else { throw FileSystemManagerError.fileEmpty }
+        return result
     }
     
     func writeFile(name: String, data: [String: Any]) throws {
@@ -58,8 +65,15 @@ final class FileSystemManager {
     }
 }
 
+enum GitFileSystemError: Error {
+    case repositoryIsNotInitialised
+    case fileNotFound
+    case failedToPush
+}
+
 final class GitFileSystem {
     private let folderURL: URL
+    private var repo: Repository?
     
     init(folderURL: URL) {
         self.folderURL = folderURL
@@ -84,6 +98,7 @@ final class GitFileSystem {
         
         switch result {
         case let .success(repo):
+            self.repo = repo
             let remoteResult = repo.remote(named: "origin")
             switch remoteResult {
             case .success(let remote):
@@ -93,7 +108,25 @@ final class GitFileSystem {
                     let remoteBranchResult = repo.remoteBranch(named: "origin/main")
                     switch remoteBranchResult {
                     case .success(let remoteBranch):
-                        print("merge result: \(repo.merge(commit: "\(remoteBranch.oid)"))")
+                        var mergeResult = repo.merge(commit: "\(remoteBranch.oid)")
+                        while mergeResult != 0 {
+                            switch mergeResult {
+                                // TODO: create enum of merge state in Swift
+                                // Merge state
+                            case 1:
+                                do {
+                                    let commit = try commit(message: "Merge main")
+                                    print("Merge commit created: \(commit)")
+                                } catch(let error) {
+                                    print(error)
+                                    return
+                                }
+                            default:
+                                ()
+                            }
+                            mergeResult = repo.merge(commit: "\(remoteBranch.oid)")
+                        }
+                        print("Pushed :\(repo.push())")
                         let latestCommit = repo
                             .HEAD()
                             .flatMap {
@@ -118,6 +151,36 @@ final class GitFileSystem {
         case let .failure(error):
             print("Could not open repository: \(error)")
         }
+    }
+    
+    // TODO: stage by file name - use git_index_add_bypath
+    func add(name: String) throws {
+        let filePath = "/"
+        guard let repo else { throw GitFileSystemError.repositoryIsNotInitialised }
+//        guard FileManager.default.fileExists(atPath: filePath) else { throw GitFileSystemError.fileNotFound }
+        let addResult = repo.add(path: filePath)
+        switch addResult {
+        case .success():
+            ()
+        case .failure(let error):
+            throw error
+        }
+    }
+    
+    func commit(message: String) throws -> Commit {
+        guard let repo else { throw GitFileSystemError.repositoryIsNotInitialised }
+        let commitResult = repo.commit(message: message, signature: Signature(name: "test", email: "test@test.com"))
+        switch commitResult {
+        case .success(let newCommit):
+            return newCommit
+        case .failure(let error):
+            throw error
+        }
+    }
+    
+    func push() throws {
+        guard let repo else { throw GitFileSystemError.repositoryIsNotInitialised }
+        guard repo.push() == 0 else { throw GitFileSystemError.failedToPush }
     }
 }
 
@@ -199,7 +262,7 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
                 var fetchedObjects = [NSManagedObject]()
                 for fileName in fileNames {
                     let objectID = self.newObjectID(for: entity, referenceObject: fileName)
-                    let managedObject = context.object(with: objectID)
+                    var managedObject = context.object(with: objectID)
                     fetchedObjects.append(managedObject)
                 }
                 return fetchedObjects
@@ -218,6 +281,12 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
                         try fileSystemManager.writeFile(name: sifileName, data: ["name" : sifileName,
                                                                                 "contents" : sifile.contents ?? ""
                                                                                 ])
+                        // TODO: Add file
+                        try gitFileSystem.add(name: sifileName)
+                        try gitFileSystem.commit(message: "Adding \(sifileName)")
+                        gitFileSystem.fetchLatestData()
+                        try gitFileSystem.push()
+                        
                         // TODO: commit file
                         // TODO: push
                     }
@@ -251,10 +320,9 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
         guard let uid = referenceObject(for: objectID) as? String else {
             throw FileSystemIncrementalStoreError.wrongObjectID
         }
-        guard let jsonDict = try fileSystemManager?.parseJSONFile(name: uid) else {
-            throw FileSystemIncrementalStoreError.failedToParseObject
-        }
-        return NSIncrementalStoreNode(objectID: objectID, withValues: jsonDict, version: 0)
+        guard let fileSystemManager else { throw FileSystemIncrementalStoreError.fileSystemNotInitialised  }
+        let jsonDict = try? fileSystemManager.parseJSONFile(name: uid)
+        return NSIncrementalStoreNode(objectID: objectID, withValues: jsonDict ?? ["name": uid], version: 0)
     }
     
     // TODO: support relationships
