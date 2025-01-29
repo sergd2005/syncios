@@ -157,7 +157,6 @@ final class GitFileSystem {
     func add(name: String) throws {
         let filePath = "/"
         guard let repo else { throw GitFileSystemError.repositoryIsNotInitialised }
-//        guard FileManager.default.fileExists(atPath: filePath) else { throw GitFileSystemError.fileNotFound }
         let addResult = repo.add(path: filePath)
         switch addResult {
         case .success():
@@ -281,14 +280,10 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
                         try fileSystemManager.writeFile(name: sifileName, data: ["name" : sifileName,
                                                                                 "contents" : sifile.contents ?? ""
                                                                                 ])
-                        // TODO: Add file
                         try gitFileSystem.add(name: sifileName)
                         try gitFileSystem.commit(message: "Adding \(sifileName)")
                         gitFileSystem.fetchLatestData()
                         try gitFileSystem.push()
-                        
-                        // TODO: commit file
-                        // TODO: push
                     }
                 }
             }
@@ -328,7 +323,6 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
     // TODO: support relationships
     // TODO: separate contents into relationship object
     
-    // TODO: Creating objects and saving objects
     override func obtainPermanentIDs(for array: [NSManagedObject]) throws -> [NSManagedObjectID] {
         var result = [NSManagedObjectID]()
         for object in array {
