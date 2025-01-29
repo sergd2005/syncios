@@ -77,6 +77,8 @@ final class GitFileSystem {
     
     init(folderURL: URL) {
         self.folderURL = folderURL
+        CredsStorage.login = "sergd2005"
+        CredsStorage.token = "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"
     }
     
     func fetchLatestData() {
@@ -277,9 +279,7 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
                     case .file:
                         guard let sifile = insertedObject as? SIFile else { throw FileSystemIncrementalStoreError.wrongObject }
                         guard let sifileName = sifile.name else { throw FileSystemIncrementalStoreError.fileNameIsNil }
-                        try fileSystemManager.writeFile(name: sifileName, data: ["name" : sifileName,
-                                                                                "contents" : sifile.contents ?? ""
-                                                                                ])
+                        try fileSystemManager.writeFile(name: sifileName, data: ["contents" : sifile.contents ?? ""])
                         try gitFileSystem.add(name: sifileName)
                         try gitFileSystem.commit(message: "Adding \(sifileName)")
                         gitFileSystem.fetchLatestData()
@@ -316,8 +316,12 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
             throw FileSystemIncrementalStoreError.wrongObjectID
         }
         guard let fileSystemManager else { throw FileSystemIncrementalStoreError.fileSystemNotInitialised  }
-        let jsonDict = try? fileSystemManager.parseJSONFile(name: uid)
-        return NSIncrementalStoreNode(objectID: objectID, withValues: jsonDict ?? ["name": uid], version: 0)
+        let jsonDict = (try? fileSystemManager.parseJSONFile(name: uid)) ?? [:]
+        var dataDict: [String: Any] = ["name": uid]
+        for (key, value) in jsonDict {
+            dataDict[key] = value
+        }
+        return NSIncrementalStoreNode(objectID: objectID, withValues: dataDict, version: 0)
     }
     
     // TODO: support relationships
