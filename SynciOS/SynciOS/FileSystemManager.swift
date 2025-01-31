@@ -12,13 +12,22 @@ enum FileSystemManagerError: Error {
     case fileEmpty
 }
 
+protocol FileSystemProviding {
+    func allFileNames() throws -> [String]
+    func parseJSONFile(name: String) throws -> [String: Any]
+    func writeFile(name: String, data: [String: Any]) throws
+    func createFile(name: String, data: [String: Any]) throws
+}
+
 final class FileSystemManager {
     private let folderURL: URL
     
     init(folderURL: URL) {
         self.folderURL = folderURL
     }
-    
+}
+
+extension FileSystemManager: FileSystemProviding {
     func allFileNames() throws -> [String] {
         guard let dirEnum = FileManager.default.enumerator(atPath: folderURL.path) else {
             return []
@@ -41,9 +50,14 @@ final class FileSystemManager {
         return result
     }
     
-    func writeFile(name: String, data: [String: Any]) throws {
+    func createFile(name: String, data: [String: Any]) throws {
         let filePath = folderURL.path + "/" + name + ".json"
         guard !FileManager.default.fileExists(atPath: filePath) else { throw FileSystemManagerError.fileExists }
+        try (JSONSerialization.data(withJSONObject: data, options: .prettyPrinted) as NSData).write(toFile: filePath)
+    }
+    
+    func writeFile(name: String, data: [String: Any]) throws {
+        let filePath = folderURL.path + "/" + name + ".json"
         try (JSONSerialization.data(withJSONObject: data, options: .prettyPrinted) as NSData).write(toFile: filePath)
     }
 }

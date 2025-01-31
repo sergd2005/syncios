@@ -13,8 +13,7 @@ import CoreData
 struct SynciOSApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                
+            ContentView(coreDataStack: CoreDataStack(pathsManager: PathsManager()))
         }
     }
 }

@@ -25,11 +25,11 @@ struct FileContentsView: View {
 }
 
 struct ContentView: View {
-    let coreDataStack: CoreDataStack
+    let coreDataStack: CoreDataStackProviding
     
     @State var files: [FileViewModel] = []
     
-    init(coreDataStack: CoreDataStack = CoreDataStack.shared) {
+    init(coreDataStack: CoreDataStackProviding) {
         self.coreDataStack = coreDataStack
     }
     
@@ -82,7 +82,7 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(coreDataStack: .shared)
+    ContentView(coreDataStack: CoreDataStack(pathsManager: PathsManager()))
 }
 
 #Preview {

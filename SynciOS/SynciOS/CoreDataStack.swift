@@ -6,19 +6,31 @@
 //
 import CoreData
 
-class CoreDataStack: ObservableObject {
-    static let shared = CoreDataStack()
+protocol CoreDataStackProviding {
+    var persistentContainer: NSPersistentContainer { get }
+}
+
+class CoreDataStack: ObservableObject, CoreDataStackProviding {
     
-    private init() {
+    private let pathsManager: PathsProviding
+    
+    init(pathsManager: PathsProviding) {
+        self.pathsManager = pathsManager
         NSPersistentStoreCoordinator.registerStoreClass(FileSystemIncrementalStore.self, type: FileSystemIncrementalStore.type)
     }
+    
+    private lazy var storeDescription: NSPersistentStoreDescription = {
+        let desc = NSPersistentStoreDescription(url: pathsManager.localURL)
+        desc.type = FileSystemIncrementalStore.type.rawValue
+        return desc
+    }()
     
     // Create a persistent container as a lazy variable to defer instantiation until its first use.
     lazy var persistentContainer: NSPersistentContainer = {
         
         // Pass the data model filename to the container’s initializer.
         let container = NSPersistentContainer(name: "Model")
-        container.persistentStoreDescriptions = [FileSystemIncrementalStore.storeDescription]
+        container.persistentStoreDescriptions = [storeDescription]
         
         // Load any persistent stores, which creates a store if none exists.
         container.loadPersistentStores { description, error in

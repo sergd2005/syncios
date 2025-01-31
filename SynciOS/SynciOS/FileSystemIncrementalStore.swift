@@ -23,8 +23,7 @@ enum FileSystemIncrementalStoreError: Error {
 }
 
 final class FileSystemIncrementalStore: NSIncrementalStore {
-    private var fileSystemManager: FileSystemManager?
-    private var gitFileSystem: GitFileSystem?
+    private var fileSystemManager: FileSystemProviding?
     
     enum EntityType: String {
         case file = "SIFile"
@@ -37,27 +36,15 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
         NSPersistentStore.StoreType(rawValue: "SynciOS.\(Self.self)")
     }
     
-    static let storeDescription: NSPersistentStoreDescription = {
-        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let localUrl = documentsDirectory.appendingPathComponent("repo")
-        let desc = NSPersistentStoreDescription(url: localUrl)
-        desc.type = type.rawValue
-        return desc
-    }()
-    
     // MARK: Init Store
     override func loadMetadata() throws {
-        guard let storeURL = self.url else {
-            throw FileSystemIncrementalStoreError.invalidUrl
-        }
         let metadata = [NSStoreUUIDKey : uuid.uuidString, NSStoreTypeKey: Self.type.rawValue]
         self.metadata = metadata
-        fileSystemManager = FileSystemManager(folderURL: storeURL)
-        gitFileSystem = GitFileSystem(folderURL: storeURL)
+        fileSystemManager = DependencyManager.shared.fileSystemManager
     }
     
     override func execute(_ request: NSPersistentStoreRequest, with context: NSManagedObjectContext?) throws -> Any {
-        guard let fileSystemManager, let gitFileSystem else { throw FileSystemIncrementalStoreError.fileSystemNotInitialised }
+        guard let fileSystemManager else { throw FileSystemIncrementalStoreError.fileSystemNotInitialised }
         switch request.requestType {
         case .fetchRequestType:
             guard let context else { throw FileSystemIncrementalStoreError.noContext }
@@ -65,8 +52,6 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
             guard let entity = fetchRequest.entity else { throw FileSystemIncrementalStoreError.invalidFetchRequestEntity }
             guard let entityName = entity.name else { throw FileSystemIncrementalStoreError.emptyEntityName }
             guard let entityType = EntityType(rawValue: entityName) else { throw FileSystemIncrementalStoreError.undefinedEntityType }
-            
-            gitFileSystem.fetchLatestData()
             
             switch entityType {
             case .file:
@@ -90,10 +75,7 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
                     case .file:
                         guard let sifile = insertedObject as? SIFile else { throw FileSystemIncrementalStoreError.wrongObject }
                         guard let sifileName = sifile.name else { throw FileSystemIncrementalStoreError.fileNameIsNil }
-                        try fileSystemManager.writeFile(name: sifileName, data: ["contents" : sifile.contents ?? ""])
-                        try gitFileSystem.add(name: sifileName)
-                        try gitFileSystem.commit(message: "Adding \(sifileName)")
-                        gitFileSystem.fetchLatestData()
+                        try fileSystemManager.createFile(name: sifileName, data: ["contents" : sifile.contents ?? ""])
                     }
                 }
             }
