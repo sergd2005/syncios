@@ -20,13 +20,17 @@ protocol FileSystemProviding {
     func writeFile(name: String, data: Data) throws
     func createFile(name: String, data: Data) throws
     func deleteFile(name: String) throws
+    func fileExists(name: String) -> Bool
 }
 
 final class FileSystemManager {
     private let folderURL: URL
     
-    init(folderURL: URL) {
+    init(folderURL: URL) throws {
         self.folderURL = folderURL
+        if !FileManager.default.fileExists(atPath: folderURL.path) {
+            try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
+        }
     }
 }
 
@@ -54,24 +58,29 @@ extension FileSystemManager: FileSystemProviding {
     }
     
     func createFile(name: String, data: Data) throws {
-        let filePath = folderURL.path + "/" + name + ".json"
+        let filePath = folderURL.path + "/" + name
         guard !FileManager.default.fileExists(atPath: filePath) else { throw FileSystemManagerError.fileExists }
         try (data as NSData).write(toFile: filePath)
     }
     
     func readFile(name: String) throws -> Data {
-        let filePath = folderURL.path + "/" + name + ".json"
+        let filePath = folderURL.path + "/" + name
         return try NSData(contentsOfFile: filePath) as Data
     }
     
     func writeFile(name: String, data: Data) throws {
-        let filePath = folderURL.path + "/" + name + ".json"
+        let filePath = folderURL.path + "/" + name
         try (data as NSData).write(toFile: filePath)
     }
     
     func deleteFile(name: String) throws {
-        let filePath = folderURL.path + "/" + name + ".json"
-        guard FileManager.default.fileExists(atPath: filePath) else { throw FileSystemManagerError.noFileFound }
+        let filePath = folderURL.path + "/" + name
         try FileManager.default.removeItem(atPath: filePath)
+    }
+    
+    func fileExists(name: String) -> Bool {
+        // TODO: extract in func
+        let filePath = folderURL.path + "/" + name
+        return FileManager.default.fileExists(atPath: filePath)
     }
 }

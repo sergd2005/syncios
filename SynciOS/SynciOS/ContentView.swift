@@ -25,13 +25,7 @@ struct FileContentsView: View {
 }
 
 struct ContentView: View {
-    let coreDataStack: CoreDataStackProviding
-    
     @State var files: [FileViewModel] = []
-    
-    init(coreDataStack: CoreDataStackProviding) {
-        self.coreDataStack = coreDataStack
-    }
     
     var body: some View {
         NavigationView {
@@ -48,7 +42,7 @@ struct ContentView: View {
             .navigationTitle("Files")
             .toolbar {
                 Button("Add") {
-                    coreDataStack.persistentContainer.performBackgroundTask { context in
+                    DependencyManager.shared.coreDataStack.persistentContainer.performBackgroundTask { context in
                         guard let _ = NSEntityDescription.insertNewObject(forEntityName: "SIFile", into: context) as? SIFile else {
                             print("[ERROR] Failed to insert object")
                             return
@@ -69,7 +63,7 @@ struct ContentView: View {
             }
         }
         .onAppear() {
-            coreDataStack.persistentContainer.performBackgroundTask { context in
+            DependencyManager.shared.coreDataStack.persistentContainer.performBackgroundTask { context in
                 let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: FileSystemIncrementalStore.EntityType.file.rawValue)
                 let result = try? context.fetch(fetchRequest) as? [SIFile]
                 if let result {
@@ -82,7 +76,7 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(coreDataStack: CoreDataStack(pathsManager: PathsManager()))
+    ContentView()
 }
 
 #Preview {

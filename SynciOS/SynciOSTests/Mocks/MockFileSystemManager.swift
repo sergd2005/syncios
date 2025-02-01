@@ -9,6 +9,10 @@ import Foundation
 @testable import SynciOS
 
 final class MockFileSystemManager: FileSystemProviding {
+    func fileExists(name: String) -> Bool {
+        false
+    }
+    
     func allFileNames() throws -> [String] {
         []
     }

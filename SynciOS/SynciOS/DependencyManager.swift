@@ -16,9 +16,9 @@ final class DependencyProvider: DependencyProviding {
     let pathsManager: PathsProviding
     let coreDataStack: CoreDataStack
     
-    init() {
+    init() throws {
         pathsManager = PathsManager()
-        fileSystemManager = FileSystemManager(folderURL: pathsManager.localURL)
+        fileSystemManager = try FileSystemManager(folderURL: pathsManager.localURL)
         coreDataStack = CoreDataStack(pathsManager: pathsManager)
     }
 }
@@ -29,7 +29,12 @@ final class DependencyManager {
     var dependencyProvider: DependencyProviding
     
     private init() {
-        dependencyProvider = DependencyProvider()
+        do {
+            try dependencyProvider = DependencyProvider()
+        } catch (let error) {
+            print(error)
+            fatalError()
+        }
     }
 }
 
