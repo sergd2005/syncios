@@ -8,15 +8,18 @@
 protocol DependencyProviding {
     var fileSystemManager: FileSystemProviding { get }
     var pathsManager: PathsProviding { get }
+    var coreDataStack: CoreDataStack { get }
 }
 
 final class DependencyProvider: DependencyProviding {
     let fileSystemManager: FileSystemProviding
     let pathsManager: PathsProviding
+    let coreDataStack: CoreDataStack
     
     init() {
         pathsManager = PathsManager()
         fileSystemManager = FileSystemManager(folderURL: pathsManager.localURL)
+        coreDataStack = CoreDataStack(pathsManager: pathsManager)
     }
 }
 
@@ -31,6 +34,10 @@ final class DependencyManager {
 }
 
 extension DependencyManager: DependencyProviding {
+    var coreDataStack: CoreDataStack {
+        dependencyProvider.coreDataStack
+    }
+    
     var fileSystemManager: any FileSystemProviding {
         dependencyProvider.fileSystemManager
     }

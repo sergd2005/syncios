@@ -11,11 +11,11 @@ enum SIFileError: Error {
 }
 
 extension SIFile {
-    func jsonData() throws -> Data {
+    func toData() throws -> Data {
         try JSONSerialization.data(withJSONObject: ["contents" : contents], options: .prettyPrinted)
     }
     
-    func fromJSONData(_ data: Data) throws {
+    func fromData(_ data: Data) throws {
         guard let result = try JSONSerialization.jsonObject(with: data, options: .allowFragments) as? [String: Any]
         else { throw SIFileError.parsingDataFailed }
         contents = result["contents"] as? String

@@ -75,7 +75,7 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
                     case .file:
                         guard let sifile = insertedObject as? SIFile else { throw FileSystemIncrementalStoreError.wrongObject }
                         guard let sifileName = sifile.name else { throw FileSystemIncrementalStoreError.fileNameIsNil }
-                        try fileSystemManager.createFile(name: sifileName, data: try sifile.jsonData())
+                        try fileSystemManager.createFile(name: sifileName, data: try sifile.toData())
                     }
                 }
             }
@@ -87,7 +87,7 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
                     case .file:
                         guard let sifile = updatedObject as? SIFile else { throw FileSystemIncrementalStoreError.wrongObject }
                         guard let sifileName = sifile.name else { throw FileSystemIncrementalStoreError.fileNameIsNil }
-                        try fileSystemManager.writeFile(name: sifileName, data: try sifile.jsonData())
+                        try fileSystemManager.writeFile(name: sifileName, data: try sifile.toData())
                     }
                 }
             }
