@@ -56,9 +56,30 @@
 		85C45EA22D45BB2F0004FD9A /* SwiftGit2.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SwiftGit2.xcodeproj; path = /Users/sergiid/Desktop/ProjectSync/SwiftGit2/SwiftGit2.xcodeproj; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		852409712D4EAF9B006A0D30 /* Exceptions for "SynciOS" folder in "SynciOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				POC/CoreDataStack.swift,
+				POC/CoreDataStackTests.swift,
+				POC/FileSystemIncrementalStore.swift,
+				POC/FileSystemMonitor.swift,
+				POC/FileSystemMonitorTests.swift,
+				POC/MockFileSystemManager.swift,
+				POC/MockFileSystemManagerTests.swift,
+				POC/Model.xcdatamodeld,
+				"POC/SIFile+Extensions.swift",
+			);
+			target = 85C45E4C2D458D910004FD9A /* SynciOS */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		85C45E4F2D458D910004FD9A /* SynciOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				852409712D4EAF9B006A0D30 /* Exceptions for "SynciOS" folder in "SynciOS" target */,
+			);
 			path = SynciOS;
 			sourceTree = "<group>";
 		};
@@ -224,6 +245,7 @@
 					};
 					85C45E5C2D458D970004FD9A = {
 						CreatedOnToolsVersion = 16.2;
+						LastSwiftMigration = 1620;
 						TestTargetID = 85C45E4C2D458D910004FD9A;
 					};
 					85C45E662D458D970004FD9A = {
@@ -514,6 +536,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = NB4GG24FWL;
@@ -523,6 +546,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.sdsoftware.SynciOSTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SynciOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SynciOS";
@@ -533,6 +557,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = NB4GG24FWL;

@@ -15,7 +15,6 @@ enum FileSystemManagerError: Error {
 
 protocol FileSystemProviding {
     func allFileNames() throws -> [String]
-    func parseJSONFile(name: String) throws -> [String: Any]
     func readFile(name: String) throws -> Data
     func writeFile(name: String, data: Data) throws
     func createFile(name: String, data: Data) throws
@@ -48,39 +47,32 @@ extension FileSystemManager: FileSystemProviding {
         return result
     }
     
-    func parseJSONFile(name: String) throws -> [String: Any] {
-        guard let result = try JSONSerialization.jsonObject(with: try NSData(contentsOfFile: folderURL.path + "/" + name) as Data) as? [String: Any]
-        else {
-            throw FileSystemManagerError.failedToParseObject
-        }
-        guard !result.isEmpty else { throw FileSystemManagerError.fileEmpty }
-        return result
-    }
-    
     func createFile(name: String, data: Data) throws {
-        let filePath = folderURL.path + "/" + name
+        let filePath = fullPath(for: name)
         guard !FileManager.default.fileExists(atPath: filePath) else { throw FileSystemManagerError.fileExists }
         try (data as NSData).write(toFile: filePath)
     }
     
     func readFile(name: String) throws -> Data {
-        let filePath = folderURL.path + "/" + name
-        return try NSData(contentsOfFile: filePath) as Data
+        return try NSData(contentsOfFile: fullPath(for: name)) as Data
     }
     
     func writeFile(name: String, data: Data) throws {
-        let filePath = folderURL.path + "/" + name
-        try (data as NSData).write(toFile: filePath)
+        try (data as NSData).write(toFile: fullPath(for: name))
     }
     
     func deleteFile(name: String) throws {
-        let filePath = folderURL.path + "/" + name
-        try FileManager.default.removeItem(atPath: filePath)
+        try FileManager.default.removeItem(atPath: fullPath(for: name))
     }
     
     func fileExists(name: String) -> Bool {
-        // TODO: extract in func
-        let filePath = folderURL.path + "/" + name
-        return FileManager.default.fileExists(atPath: filePath)
+        FileManager.default.fileExists(atPath: fullPath(for: name))
+    }
+}
+
+// MARK: Private API
+extension FileSystemManager {
+    private func fullPath(for name: String) -> String {
+        folderURL.path + "/" + name
     }
 }

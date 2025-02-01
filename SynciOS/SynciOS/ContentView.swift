@@ -42,35 +42,20 @@ struct ContentView: View {
             .navigationTitle("Files")
             .toolbar {
                 Button("Add") {
-                    DependencyManager.shared.coreDataStack.persistentContainer.performBackgroundTask { context in
-                        guard let _ = NSEntityDescription.insertNewObject(forEntityName: "SIFile", into: context) as? SIFile else {
-                            print("[ERROR] Failed to insert object")
-                            return
-                        }
-                        do {
-                            try context.save()
-                            let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: FileSystemIncrementalStore.EntityType.file.rawValue)
-                            let result = try? context.fetch(fetchRequest) as? [SIFile]
-                            if let result {
-                                files = result.map { FileViewModel(name: $0.name ?? "",
-                                                                   contents: $0.contents ?? "") }
-                            }
-                        } catch(let error) {
-                            print(error)
-                        }
-                    }
+                    // TODO: Add file
                 }
             }
         }
         .onAppear() {
-            DependencyManager.shared.coreDataStack.persistentContainer.performBackgroundTask { context in
-                let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: FileSystemIncrementalStore.EntityType.file.rawValue)
-                let result = try? context.fetch(fetchRequest) as? [SIFile]
-                if let result {
-                    files = result.map { FileViewModel(name: $0.name ?? "",
-                                                       contents: $0.contents ?? "") }
-                }
-            }
+        // TODO: List all files
+//            DependencyManager.shared.coreDataStack.persistentContainer.performBackgroundTask { context in
+//                let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: FileSystemIncrementalStore.EntityType.file.rawValue)
+//                let result = try? context.fetch(fetchRequest) as? [SIFile]
+//                if let result {
+//                    files = result.map { FileViewModel(name: $0.name ?? "",
+//                                                       contents: $0.contents ?? "") }
+//                }
+//            }
         }
     }
 }
