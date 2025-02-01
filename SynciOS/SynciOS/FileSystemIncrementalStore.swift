@@ -75,32 +75,50 @@ final class FileSystemIncrementalStore: NSIncrementalStore {
                     case .file:
                         guard let sifile = insertedObject as? SIFile else { throw FileSystemIncrementalStoreError.wrongObject }
                         guard let sifileName = sifile.name else { throw FileSystemIncrementalStoreError.fileNameIsNil }
-                        try fileSystemManager.createFile(name: sifileName, data: ["contents" : sifile.contents ?? ""])
+                        try fileSystemManager.createFile(name: sifileName, data: try sifile.jsonData())
                     }
                 }
             }
             if let updatedObjects = saveRequest.updatedObjects {
-                // TODO: handle file renaming
-                // TODO: disable pull
+                for updatedObject in updatedObjects {
+                    guard let entityName = updatedObject.entity.name else { throw FileSystemIncrementalStoreError.emptyEntityName }
+                    guard let entityType = EntityType(rawValue: entityName) else { throw FileSystemIncrementalStoreError.undefinedEntityType }
+                    switch entityType {
+                    case .file:
+                        guard let sifile = updatedObject as? SIFile else { throw FileSystemIncrementalStoreError.wrongObject }
+                        guard let sifileName = sifile.name else { throw FileSystemIncrementalStoreError.fileNameIsNil }
+                        try fileSystemManager.writeFile(name: sifileName, data: try sifile.jsonData())
+                    }
+                }
             }
             if let deletedObjects = saveRequest.deletedObjects {
-                
+                for deletedObject in deletedObjects {
+                    guard let entityName = deletedObject.entity.name else { throw FileSystemIncrementalStoreError.emptyEntityName }
+                    guard let entityType = EntityType(rawValue: entityName) else { throw FileSystemIncrementalStoreError.undefinedEntityType }
+                    switch entityType {
+                    case .file:
+                        guard let sifile = deletedObject as? SIFile else { throw FileSystemIncrementalStoreError.wrongObject }
+                        guard let sifileName = sifile.name else { throw FileSystemIncrementalStoreError.fileNameIsNil }
+                        try fileSystemManager.deleteFile(name: sifileName)
+                    }
+                }
             }
+            // TODO: support locked objects?
             if let optLockObjects = saveRequest.lockedObjects {
-                
+                fatalError()
             }
             
             return [AnyObject]()
-        case .batchInsertRequestType:
-            ()
-        case .batchUpdateRequestType:
-            ()
-        case .batchDeleteRequestType:
-            ()
+            // TODO: support batch requests
+//        case .batchInsertRequestType:
+//            ()
+//        case .batchUpdateRequestType:
+//            ()
+//        case .batchDeleteRequestType:
+//            ()
         @unknown default:
             fatalError()
         }
-        return []
     }
     
     // MARK: Fulfilling Attribute Faults

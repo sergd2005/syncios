@@ -8,6 +8,7 @@ import Foundation
 
 enum FileSystemManagerError: Error {
     case fileExists
+    case noFileFound
     case failedToParseObject
     case fileEmpty
 }
@@ -15,8 +16,10 @@ enum FileSystemManagerError: Error {
 protocol FileSystemProviding {
     func allFileNames() throws -> [String]
     func parseJSONFile(name: String) throws -> [String: Any]
-    func writeFile(name: String, data: [String: Any]) throws
-    func createFile(name: String, data: [String: Any]) throws
+    func readFile(name: String) throws -> Data
+    func writeFile(name: String, data: Data) throws
+    func createFile(name: String, data: Data) throws
+    func deleteFile(name: String) throws
 }
 
 final class FileSystemManager {
@@ -50,14 +53,25 @@ extension FileSystemManager: FileSystemProviding {
         return result
     }
     
-    func createFile(name: String, data: [String: Any]) throws {
+    func createFile(name: String, data: Data) throws {
         let filePath = folderURL.path + "/" + name + ".json"
         guard !FileManager.default.fileExists(atPath: filePath) else { throw FileSystemManagerError.fileExists }
-        try (JSONSerialization.data(withJSONObject: data, options: .prettyPrinted) as NSData).write(toFile: filePath)
+        try (data as NSData).write(toFile: filePath)
     }
     
-    func writeFile(name: String, data: [String: Any]) throws {
+    func readFile(name: String) throws -> Data {
         let filePath = folderURL.path + "/" + name + ".json"
-        try (JSONSerialization.data(withJSONObject: data, options: .prettyPrinted) as NSData).write(toFile: filePath)
+        return try NSData(contentsOfFile: filePath) as Data
+    }
+    
+    func writeFile(name: String, data: Data) throws {
+        let filePath = folderURL.path + "/" + name + ".json"
+        try (data as NSData).write(toFile: filePath)
+    }
+    
+    func deleteFile(name: String) throws {
+        let filePath = folderURL.path + "/" + name + ".json"
+        guard FileManager.default.fileExists(atPath: filePath) else { throw FileSystemManagerError.noFileFound }
+        try FileManager.default.removeItem(atPath: filePath)
     }
 }

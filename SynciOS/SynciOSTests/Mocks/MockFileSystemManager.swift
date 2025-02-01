@@ -5,6 +5,7 @@
 //  Created by Sergii D on 1/31/25.
 //
 
+import Foundation
 @testable import SynciOS
 
 final class MockFileSystemManager: FileSystemProviding {
@@ -16,7 +17,19 @@ final class MockFileSystemManager: FileSystemProviding {
         [:]
     }
     
-    func writeFile(name: String, data: [String : Any]) throws {
+    func readFile(name: String) throws -> Data {
+        Data()
+    }
+    
+    func writeFile(name: String, data: Data) throws {
+        
+    }
+    
+    func createFile(name: String, data: Data) throws {
+        
+    }
+    
+    func deleteFile(name: String) throws {
         
     }
 }
