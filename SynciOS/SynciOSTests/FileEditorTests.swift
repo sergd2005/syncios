@@ -135,11 +135,36 @@ final class FileEditorTests {
     }
     
     @Test func deleteFile() async throws {
-        print(DependencyManager.shared.pathsManager.localURL)
         let name = UUID().uuidString + ".json"
         var note: Note = try await editor.createFile(name: name)
         try await editor.deleteFile(note)
         #expect(note.state == .deleted)
-        print(try editor.allFileNames())
+    }
+    
+    @Test func openModifiedFile() async throws {
+        let name = UUID().uuidString + ".json"
+        var note: Note = try await editor.createFile(name: name)
+        note = try await editor.openFile(file: note)
+        note.contents = "New Content"
+        
+        var returnedError: Error?
+        do {
+            note = try await editor.openFile(file: note)
+        } catch(let error) {
+            returnedError = error
+            switch error {
+            case is FileEditorError:
+                #expect(error as! FileEditorError == .fileNotSaved)
+            default:
+                assertionFailure(error.localizedDescription)
+            }
+        }
+        
+        #expect(returnedError != nil)
+        #expect(note.state == .modified)
+        try await editor.saveFile(note)
+        #expect(note.state == .saved)
+        try await editor.deleteFile(note)
+        #expect(note.state == .deleted)
     }
 }
