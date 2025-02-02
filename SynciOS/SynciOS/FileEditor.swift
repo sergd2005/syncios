@@ -123,6 +123,9 @@ actor FileEditor: FileEditingProvider {
             guard let castedFile = existingFile as? File else {
                 throw FileEditorError.fileTypeMismatch
             }
+            guard castedFile.state != .modified else {
+                throw FileEditorError.fileNotSaved
+            }
             castedFile.state = .opened
             castedFile.dataStore = [:]
             return castedFile
