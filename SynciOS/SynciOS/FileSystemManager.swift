@@ -11,13 +11,14 @@ enum FileSystemManagerError: Error {
     case noFileFound
     case failedToParseObject
     case fileEmpty
+    case failedToCreateFile
 }
 
 protocol FileSystemProviding {
     func allFileNames() throws -> [String]
     func readFile(name: String) throws -> Data
     func writeFile(name: String, data: Data) throws
-    func createFile(name: String, data: Data) throws
+    func createFile(name: String, data: Data?) throws
     func deleteFile(name: String) throws
     func fileExists(name: String) -> Bool
 }
@@ -47,10 +48,10 @@ extension FileSystemManager: FileSystemProviding {
         return result
     }
     
-    func createFile(name: String, data: Data) throws {
+    func createFile(name: String, data: Data?) throws {
         let filePath = fullPath(for: name)
         guard !FileManager.default.fileExists(atPath: filePath) else { throw FileSystemManagerError.fileExists }
-        try (data as NSData).write(toFile: filePath)
+        guard FileManager.default.createFile(atPath: filePath, contents: data) else { throw FileSystemManagerError.failedToCreateFile }
     }
     
     func readFile(name: String) throws -> Data {

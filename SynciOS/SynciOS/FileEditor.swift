@@ -10,13 +10,15 @@ import Foundation
 class SIFile {
     enum State {
         case none
+        case created
         case opened
         case modified
         case saved
         case closed
+        case deleted
     }
     
-    fileprivate var data: [String: Any]
+    fileprivate var fieldsStore: [String: Any] = [:]
     
     fileprivate let name: String
     
@@ -24,8 +26,7 @@ class SIFile {
     
     fileprivate(set) var state: State = .none
     
-    required init(name: String, data: [String : Any]) {
-        self.data = data
+    required init(name: String) {
         self.name = name
     }
     
@@ -40,6 +41,14 @@ class SIFile {
     func setField<T>(value: T?, for key: String) {
         storedFields[key]?.value = value
     }
+    
+    func toData(fieldsStore: [String: Any]) throws -> Data {
+        fatalError("should be overriden")
+    }
+    
+    func from(data: Data) throws -> [String: Any] {
+        fatalError("should be overriden")
+    }
 }
 
 extension SIFile: Equatable {
@@ -47,7 +56,6 @@ extension SIFile: Equatable {
         lhs.name == rhs.name
     }
 }
-
 
 class SIFieldValue {
     fileprivate let key: String
@@ -60,17 +68,23 @@ class SIFieldValue {
     
     fileprivate var value: Any? {
         get {
-            file?.data[key]
+            file?.fieldsStore[key]
         }
         set {
             file?.state = .modified
-            file?.data[key] = newValue
+            file?.fieldsStore[key] = newValue
         }
     }
 }
 
 protocol FileEditingProvider {
-    func openFile(name: String) throws -> SIFile
+    func openFile<File: SIFile>(file: File) async throws -> File
+    func openFile<File: SIFile>(name: String) async throws -> File
+    func closeFile<File: SIFile>(_ file: File) async throws
+    func readFile<File: SIFile>(_ file: File) async throws
+    func saveFile<File: SIFile>(_ file: File) async throws
+    func createFile<File: SIFile>(name: String) async throws -> File
+    func deleteFile<File: SIFile>(_ file: File) async throws
 }
 
 enum FileEditorError: Error {
@@ -78,25 +92,30 @@ enum FileEditorError: Error {
     case fileNotSaved
 }
 
-final class FileEditor: FileEditingProvider {
+actor FileEditor: FileEditingProvider {
     private var files = [String: SIFile]()
     
-    func openFile<File: SIFile>(name: String) throws -> File {
+    func openFile<File: SIFile>(file: File) async throws -> File {
+        try await openFile(name: file.name)
+    }
+    
+    func openFile<File: SIFile>(name: String) async throws -> File {
         if let existingFile = files[name] {
             guard let castedFile = existingFile as? File else {
                 throw FileEditorError.fileTypeMismatch
             }
-            if castedFile.state == .closed {
-                // TODO: call parsing data from File
-                castedFile.data = ["contents": "test"]
+            if castedFile.state == .closed || castedFile.state == .created {
+                let data = try DependencyManager.shared.fileSystemManager.readFile(name: name)
+                castedFile.fieldsStore = try castedFile.from(data: data)
                 castedFile.state = .opened
             } else {
                 return castedFile
             }
         }
-        
-        // TODO: call parsing data from File
-        let file = File(name: name, data: ["contents": "test"])
+        let data = try DependencyManager.shared.fileSystemManager.readFile(name: name)
+        let file = File(name: name)
+        files[name] = file
+        file.fieldsStore = try file.from(data: data)
         file.state = .opened
         
         var storedFields = [String: SIFieldValue]()
@@ -107,27 +126,39 @@ final class FileEditor: FileEditingProvider {
         return file
     }
     
-    func closeFile<File: SIFile>(_ file: File) throws {
+    func closeFile<File: SIFile>(_ file: File) async throws {
         guard file.state != .modified else { throw FileEditorError.fileNotSaved }
-        file.data = [:]
+        file.fieldsStore = [:]
         file.state = .closed
+        files[file.name] = nil
     }
     
-    func readFile<File: SIFile>(_ file: File) throws {
+    func readFile<File: SIFile>(_ file: File) async throws {
         guard file.state != .modified else { throw FileEditorError.fileNotSaved }
-        // TODO: call parsing data from File
-        file.data = ["contents": "test"]
+        let data = try DependencyManager.shared.fileSystemManager.readFile(name: file.name)
+        file.fieldsStore = try file.from(data: data)
         file.state = .opened
     }
     
-    func saveFile<File: SIFile>(_ file: File) throws {
+    func saveFile<File: SIFile>(_ file: File) async throws {
         guard file.state == .modified else { return }
-        // TODO: write file to disk
+        let data = try file.toData(fieldsStore: file.fieldsStore)
+        try DependencyManager.shared.fileSystemManager.writeFile(name: file.name, data: data)
         file.state = .saved
     }
+    
+    func createFile<File: SIFile>(name: String) async throws -> File {
+        let file = File(name: name)
+        let data = try file.toData(fieldsStore: file.fieldsStore)
+        try DependencyManager.shared.fileSystemManager.createFile(name: name, data: data)
+        file.state = .created
+        files[file.name] = file
+        return file
+    }
+    
+    func deleteFile<File: SIFile>(_ file: File) async throws {
+        try await closeFile(file)
+        try DependencyManager.shared.fileSystemManager.deleteFile(name: file.name)
+        file.state = .deleted
+    }
 }
-
-
-//@propertyWrapper struct SIField<Value: SIFieldValue> {
-//    var wrappedValue: Value
-//}
