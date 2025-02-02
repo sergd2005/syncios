@@ -8,31 +8,40 @@
 import SwiftUI
 import CoreData
 
-struct FileViewModel: Identifiable {
-    let name: String
-    let contents: String
-    var id: String { name }
-}
-
 struct FileContentsView: View {
-    let fileViewModel: FileViewModel
+    let fileViewModel: NoteViewModel
     
     var body: some View {
         VStack {
-            Text(fileViewModel.contents)
+            Text(fileViewModel.note.contents ?? "")
         }
     }
 }
 
 struct ContentView: View {
-    @State var files: [FileViewModel] = []
+    @State var noteViewModels: [NoteViewModel] = []
     
     var body: some View {
         NavigationView {
             VStack(alignment: .leading, spacing: 12) {
-                ForEach(files) { file in
-                    NavigationLink(destination: FileContentsView(fileViewModel: file)) {
-                        Text(file.name)
+                ForEach(noteViewModels) { noteViewModel in
+                    NavigationLink(destination: FileContentsView(fileViewModel: noteViewModel)) {
+                        HStack {
+                            Text(noteViewModel.id)
+                            Button(action: {
+                                Task {
+                                    do {
+                                        _ = try await DependencyManager.shared.fileEditor.deleteFile(noteViewModel.note)
+                                        refreshFiles()
+                                    } catch(let error) {
+                                        print(error)
+                                    }
+                                }
+                            }) {
+                                Label("",systemImage: "trash")
+                                    .tint(.red)
+                            }
+                        }
                     }
                 }
                 Spacer()
@@ -42,20 +51,24 @@ struct ContentView: View {
             .navigationTitle("Files")
             .toolbar {
                 Button("Add") {
-                    // TODO: Add file
+                    Task {
+                        _ = try await DependencyManager.shared.fileEditor.createFile(name: "New File.json") as Note
+                        refreshFiles()
+                    }
                 }
             }
         }
         .onAppear() {
-        // TODO: List all files
-//            DependencyManager.shared.coreDataStack.persistentContainer.performBackgroundTask { context in
-//                let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: FileSystemIncrementalStore.EntityType.file.rawValue)
-//                let result = try? context.fetch(fetchRequest) as? [SIFile]
-//                if let result {
-//                    files = result.map { FileViewModel(name: $0.name ?? "",
-//                                                       contents: $0.contents ?? "") }
-//                }
-//            }
+            refreshFiles()
+        }
+    }
+    
+    func refreshFiles() {
+        Task {
+            noteViewModels.removeAll()
+            for filename in try DependencyManager.shared.fileEditor.allFileNames() {
+                noteViewModels.append(NoteViewModel(note: try await DependencyManager.shared.fileEditor.openFile(name: filename)))
+            }
         }
     }
 }
@@ -64,6 +77,6 @@ struct ContentView: View {
     ContentView()
 }
 
-#Preview {
-    FileContentsView(fileViewModel: FileViewModel(name: "Test", contents: "aadfadfadfasdfasdfasd"))
-}
+//#Preview {
+//    FileContentsView(fileViewModel: NoteViewModel(note: ))
+//}

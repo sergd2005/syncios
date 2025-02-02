@@ -23,7 +23,7 @@ class SIFile {
     
     fileprivate var dataStore: [String: Any] = [:]
     
-    fileprivate let name: String
+    let name: String
     
     fileprivate lazy var fieldsMap: [String: SIFieldValue] = {
         var fieldsMap = [String: SIFieldValue]()
@@ -102,6 +102,8 @@ protocol FileEditingProvider: AnyObject {
     func saveFile<File: SIFile>(_ file: File) async throws
     func createFile<File: SIFile>(name: String) async throws -> File
     func deleteFile<File: SIFile>(_ file: File) async throws
+    
+    func allFileNames() throws -> [String]
 }
 
 enum FileEditorError: Error {
@@ -126,7 +128,6 @@ actor FileEditor: FileEditingProvider {
             return castedFile
         }
         
-        let data = try DependencyManager.shared.fileSystemManager.readFile(name: name)
         let file = File(name: name, editor: self)
         files[name] = file
         file.state = .opened
@@ -167,5 +168,9 @@ actor FileEditor: FileEditingProvider {
         try await closeFile(file)
         try DependencyManager.shared.fileSystemManager.deleteFile(name: file.name)
         file.state = .deleted
+    }
+    
+    nonisolated func allFileNames() throws -> [String] {
+        try DependencyManager.shared.fileSystemManager.allFileNames()
     }
 }

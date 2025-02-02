@@ -133,4 +133,13 @@ final class FileEditorTests {
         try await editor.deleteFile(note)
         #expect(note.state == .deleted)
     }
+    
+    @Test func deleteFile() async throws {
+        print(DependencyManager.shared.pathsManager.localURL)
+        let name = UUID().uuidString + ".json"
+        var note: Note = try await editor.createFile(name: name)
+        try await editor.deleteFile(note)
+        #expect(note.state == .deleted)
+        print(try editor.allFileNames())
+    }
 }

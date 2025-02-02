@@ -12,7 +12,7 @@ enum NoteError: Error {
 }
 
 enum NoteFields: String, CaseIterable {
-    case contents
+    case contentsData
 }
 
 final class Note: SIFile {
@@ -21,12 +21,12 @@ final class Note: SIFile {
         NoteFields.allCases.map { $0.rawValue }
     }
     
-    var contents: String? {
+    var contentsData: String? {
         get {
-            field(for: NoteFields.contents.rawValue)
+            field(for: NoteFields.contentsData.rawValue)
         }
         set {
-            setField(value: newValue, for: NoteFields.contents.rawValue)
+            setField(value: newValue, for: NoteFields.contentsData.rawValue)
         }
     }
     
@@ -39,5 +39,15 @@ final class Note: SIFile {
         let object = try JSONSerialization.jsonObject(with: data, options: .allowFragments)
         guard let castedObject = object as? [String: Any] else { throw NoteError.failedToCastDataObject }
         return castedObject
+    }
+}
+
+final class NoteViewModel: Identifiable, ObservableObject {
+    var id: String { note.name }
+    
+    let note: Note
+    
+    init(note: Note) {
+        self.note = note
     }
 }
