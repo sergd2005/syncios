@@ -14,10 +14,10 @@ final class FileEditorTests {
     
     @Test func openNotes() async throws {
         let name = UUID().uuidString + ".json"
-        let newNote: Note = try await editor.createFile(name: name)
-        let note: Note = try await editor.openFile(name: name)
+        let note: Note = try await editor.createFile(name: name)
+        _ = try await editor.openFile(file: note)
         #expect(note.contents == "")
-        #expect(note.state == .opened)
+        #expect(note.state == .read)
         note.contents = "new content"
         #expect(note.contents == "new content")
         #expect(note.state == .modified)
@@ -83,7 +83,6 @@ final class FileEditorTests {
         let name = UUID().uuidString + ".json"
         let newNote: Note = try await editor.createFile(name: name)
         let note: Note = try await editor.openFile(name: name)
-        try await editor.readFile(note)
         #expect(note.state == .opened)
         try await editor.deleteFile(note)
     }

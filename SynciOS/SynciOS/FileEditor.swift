@@ -12,22 +12,32 @@ class SIFile {
         case none
         case created
         case opened
+        case read
         case modified
         case saved
         case closed
         case deleted
     }
     
-    fileprivate var fieldsStore: [String: Any] = [:]
+    fileprivate weak var editor: FileEditingProvider?
+    
+    fileprivate var dataStore: [String: Any] = [:]
     
     fileprivate let name: String
     
-    fileprivate var storedFields: [String: SIFieldValue] = [:]
+    fileprivate lazy var fieldsMap: [String: SIFieldValue] = {
+        var fieldsMap = [String: SIFieldValue]()
+        fields().forEach {
+            fieldsMap[$0] = SIFieldValue(key: $0, file: self)
+        }
+        return fieldsMap
+    }()
     
     fileprivate(set) var state: State = .none
     
-    required init(name: String) {
+    required init(name: String, editor: FileEditingProvider) {
         self.name = name
+        self.editor = editor
     }
     
     func fields() -> [String] {
@@ -35,11 +45,11 @@ class SIFile {
     }
     
     func field<T>(for key: String) -> T? {
-        storedFields[key]?.value as? T
+        fieldsMap[key]?.value as? T
     }
     
     func setField<T>(value: T?, for key: String) {
-        storedFields[key]?.value = value
+        fieldsMap[key]?.value = value
     }
     
     func toData(fieldsStore: [String: Any]) throws -> Data {
@@ -66,22 +76,29 @@ class SIFieldValue {
         self.file = file
     }
     
-    fileprivate var value: Any? {
+    fileprivate var value: Any?  {
         get {
-            file?.fieldsStore[key]
+            if let file, file.state == .opened {
+                do {
+                    _ = try file.editor?.readFile(file)
+                } catch(let error) {
+                    print(error.localizedDescription)
+                }
+            }
+            return file?.dataStore[key]
         }
         set {
             file?.state = .modified
-            file?.fieldsStore[key] = newValue
+            file?.dataStore[key] = newValue
         }
     }
 }
 
-protocol FileEditingProvider {
+protocol FileEditingProvider: AnyObject {
     func openFile<File: SIFile>(file: File) async throws -> File
     func openFile<File: SIFile>(name: String) async throws -> File
     func closeFile<File: SIFile>(_ file: File) async throws
-    func readFile<File: SIFile>(_ file: File) async throws
+    func readFile<File: SIFile>(_ file: File) throws
     func saveFile<File: SIFile>(_ file: File) async throws
     func createFile<File: SIFile>(name: String) async throws -> File
     func deleteFile<File: SIFile>(_ file: File) async throws
@@ -104,52 +121,42 @@ actor FileEditor: FileEditingProvider {
             guard let castedFile = existingFile as? File else {
                 throw FileEditorError.fileTypeMismatch
             }
-            if castedFile.state == .closed || castedFile.state == .created {
-                let data = try DependencyManager.shared.fileSystemManager.readFile(name: name)
-                castedFile.fieldsStore = try castedFile.from(data: data)
-                castedFile.state = .opened
-            } else {
-                return castedFile
-            }
+            castedFile.state = .opened
+            castedFile.dataStore = [:]
+            return castedFile
         }
-        let data = try DependencyManager.shared.fileSystemManager.readFile(name: name)
-        let file = File(name: name)
-        files[name] = file
-        file.fieldsStore = try file.from(data: data)
-        file.state = .opened
         
-        var storedFields = [String: SIFieldValue]()
-        file.fields().forEach {
-            storedFields[$0] = SIFieldValue(key: $0, file: file)
-        }
-        file.storedFields = storedFields
+        let data = try DependencyManager.shared.fileSystemManager.readFile(name: name)
+        let file = File(name: name, editor: self)
+        files[name] = file
+        file.state = .opened
         return file
     }
     
     func closeFile<File: SIFile>(_ file: File) async throws {
         guard file.state != .modified else { throw FileEditorError.fileNotSaved }
-        file.fieldsStore = [:]
+        file.dataStore = [:]
         file.state = .closed
         files[file.name] = nil
     }
     
-    func readFile<File: SIFile>(_ file: File) async throws {
+    nonisolated func readFile<File: SIFile>(_ file: File) throws {
         guard file.state != .modified else { throw FileEditorError.fileNotSaved }
         let data = try DependencyManager.shared.fileSystemManager.readFile(name: file.name)
-        file.fieldsStore = try file.from(data: data)
-        file.state = .opened
+        file.dataStore = try file.from(data: data)
+        file.state = .read
     }
     
     func saveFile<File: SIFile>(_ file: File) async throws {
         guard file.state == .modified else { return }
-        let data = try file.toData(fieldsStore: file.fieldsStore)
+        let data = try file.toData(fieldsStore: file.dataStore)
         try DependencyManager.shared.fileSystemManager.writeFile(name: file.name, data: data)
         file.state = .saved
     }
     
     func createFile<File: SIFile>(name: String) async throws -> File {
-        let file = File(name: name)
-        let data = try file.toData(fieldsStore: file.fieldsStore)
+        let file = File(name: name, editor: self)
+        let data = try file.toData(fieldsStore: file.dataStore)
         try DependencyManager.shared.fileSystemManager.createFile(name: name, data: data)
         file.state = .created
         files[file.name] = file
