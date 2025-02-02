@@ -12,7 +12,8 @@ enum NoteError: Error {
 }
 
 enum NoteFields: String, CaseIterable {
-    case contentsData
+    case contents
+    case comment
 }
 
 final class Note: SIFile {
@@ -21,18 +22,20 @@ final class Note: SIFile {
         NoteFields.allCases.map { $0.rawValue }
     }
     
-    var contentsData: String? {
+    var contents: String? {
         get {
-            field(for: NoteFields.contentsData.rawValue)
+            field(for: NoteFields.contents.rawValue)
         }
         set {
-            setField(value: newValue, for: NoteFields.contentsData.rawValue)
+            setField(value: newValue, for: NoteFields.contents.rawValue)
         }
     }
     
     override func toData(fieldsStore: [String: Any]) throws -> Data {
-        let dict = (fieldsStore.isEmpty == true ? ["contents" : ""] : fieldsStore)
-        return try JSONSerialization.data(withJSONObject: dict)
+        // TODO: provide empty dict for all keys
+        // TODO: move to SIFile callback empty fieldsStore case
+        let dict = (fieldsStore.isEmpty == true ? [NoteFields.contents.rawValue : "", NoteFields.comment.rawValue : ""] : fieldsStore)
+        return try JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
     }
     
     override func from(data: Data) throws -> [String: Any] {
@@ -42,12 +45,3 @@ final class Note: SIFile {
     }
 }
 
-final class NoteViewModel: Identifiable, ObservableObject {
-    var id: String { note.name }
-    
-    let note: Note
-    
-    init(note: Note) {
-        self.note = note
-    }
-}

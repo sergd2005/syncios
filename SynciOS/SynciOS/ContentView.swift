@@ -13,7 +13,7 @@ struct FileContentsView: View {
     
     var body: some View {
         VStack {
-            Text(fileViewModel.note.contents ?? "")
+            Text(fileViewModel.contents ?? "")
         }
     }
 }
@@ -27,7 +27,7 @@ struct ContentView: View {
                 ForEach(noteViewModels) { noteViewModel in
                     NavigationLink(destination: FileContentsView(fileViewModel: noteViewModel)) {
                         HStack {
-                            Text(noteViewModel.id)
+                            Text(noteViewModel.name)
                             Button(action: {
                                 Task {
                                     do {

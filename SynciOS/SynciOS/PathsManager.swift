@@ -19,3 +19,11 @@ final class PathsManager: PathsProviding {
         localURL = documentsDirectory.appendingPathComponent("repo")
     }
 }
+
+final class MockPathsManager: PathsProviding {
+    let localURL: URL
+    
+    init(localURL: URL) {
+        self.localURL = localURL
+    }
+}

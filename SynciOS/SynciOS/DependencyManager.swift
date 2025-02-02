@@ -23,6 +23,18 @@ final class DependencyProvider: DependencyProviding {
     }
 }
 
+final class MockDependencyProvider: DependencyProviding {
+    let fileSystemManager: FileSystemProviding
+    let pathsManager: PathsProviding
+    let fileEditor: FileEditingProvider
+    
+    init(fileSystemManager: FileSystemProviding, pathsManager: PathsProviding, fileEditor: FileEditingProvider) throws {
+        self.fileSystemManager = fileSystemManager
+        self.pathsManager = pathsManager
+        self.fileEditor = fileEditor
+    }
+}
+
 final class DependencyManager {
     static let shared = DependencyManager()
     
