@@ -21,6 +21,7 @@ protocol FileSystemProviding {
     func createFile(name: String, data: Data?) throws
     func deleteFile(name: String) throws
     func fileExists(name: String) -> Bool
+    func getModifiedDate(name: String) throws -> Date?
 }
 
 final class FileSystemManager {
@@ -68,6 +69,10 @@ extension FileSystemManager: FileSystemProviding {
     
     func fileExists(name: String) -> Bool {
         FileManager.default.fileExists(atPath: fullPath(for: name))
+    }
+    
+    func getModifiedDate(name: String) throws -> Date? {
+        try FileManager.default.attributesOfItem(atPath: fullPath(for: name))[FileAttributeKey.modificationDate] as? Date
     }
 }
 

@@ -20,8 +20,9 @@ class SIFile {
     }
     
     fileprivate weak var editor: FileEditingProvider?
-    
+    fileprivate(set) var state: State = .none
     fileprivate var dataStore: [String: Any] = [:]
+    fileprivate var modifiedDate: Date = Date()
     
     let name: String
     
@@ -32,8 +33,6 @@ class SIFile {
         }
         return fieldsMap
     }()
-    
-    fileprivate(set) var state: State = .none
     
     required init(name: String, editor: FileEditingProvider) {
         self.name = name
@@ -85,6 +84,7 @@ class SIFieldValue {
                     print(error.localizedDescription)
                 }
             }
+            // TODO: open closed file then try to read
             return file?.dataStore[key]
         }
         set {
@@ -102,7 +102,6 @@ protocol FileEditingProvider: AnyObject {
     func saveFile<File: SIFile>(_ file: File) async throws
     func createFile<File: SIFile>(name: String) async throws -> File
     func deleteFile<File: SIFile>(_ file: File) async throws
-    
     func allFileNames() throws -> [String]
 }
 

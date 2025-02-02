@@ -32,8 +32,7 @@ final class Note: SIFile {
     }
     
     override func toData(fieldsStore: [String: Any]) throws -> Data {
-        // TODO: provide empty dict for all keys
-        // TODO: move to SIFile callback empty fieldsStore case
+        // TODO: move to SIFile generic implementation
         let dict = (fieldsStore.isEmpty == true ? [NoteFields.contents.rawValue : "", NoteFields.comment.rawValue : ""] : fieldsStore)
         return try JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
     }
