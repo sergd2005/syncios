@@ -50,9 +50,11 @@ final class FileEditorTests {
         let newNote: Note = try await editor.createFile(name: name)
         let note: Note = try await editor.openFile(name: name)
         note.contents = "Some content"
+        var returnedError: Error?
         do {
             try await editor.closeFile(note)
         } catch(let error) {
+            returnedError = error
             switch error {
             case is FileEditorError:
                 #expect(error as! FileEditorError == .fileNotSaved)
@@ -60,6 +62,7 @@ final class FileEditorTests {
                 assertionFailure(error.localizedDescription)
             }
         }
+        #expect(returnedError != nil)
         #expect(note.state == .modified)
         #expect(note.contents == "Some content")
         try await editor.saveFile(note)
@@ -92,9 +95,11 @@ final class FileEditorTests {
         let newNote: Note = try await editor.createFile(name: name)
         let note: Note = try await editor.openFile(name: name)
         note.contents = "Some content"
+        var returnedError: Error?
         do {
-            try await editor.readFile(note)
+            try editor.readFile(note)
         } catch(let error) {
+            returnedError = error
             switch error {
             case is FileEditorError:
                 #expect(error as! FileEditorError == .fileNotSaved)
@@ -102,6 +107,7 @@ final class FileEditorTests {
                 assertionFailure(error.localizedDescription)
             }
         }
+        #expect(returnedError != nil)
         #expect(note.state == .modified)
         #expect(note.contents == "Some content")
         try await editor.saveFile(note)
