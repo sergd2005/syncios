@@ -10,7 +10,6 @@ import Foundation
 class SIFile {
     enum State {
         case none
-        case created
         case opened
         case read
         case modified
@@ -22,7 +21,7 @@ class SIFile {
     fileprivate weak var editor: FileEditingProvider?
     fileprivate(set) var state: State = .none
     fileprivate var dataStore: [String: Any] = [:]
-    fileprivate var modifiedDate: Date = Date()
+    fileprivate var modifiedDate: Date?
     
     let name: String
     
@@ -106,8 +105,12 @@ protocol FileEditingProvider: AnyObject {
 }
 
 enum FileEditorError: Error {
+    case fileStateIsUndefined
     case fileTypeMismatch
     case fileNotSaved
+    case fileIsClosed
+    case fileIsDeleted
+    case unableToGetModifiedDate
 }
 
 actor FileEditor: FileEditingProvider {
@@ -118,51 +121,97 @@ actor FileEditor: FileEditingProvider {
     }
     
     func openFile<File: SIFile>(name: String) async throws -> File {
-        if let existingFile = files[name] {
-            guard let castedFile = existingFile as? File else {
-                throw FileEditorError.fileTypeMismatch
-            }
-            guard castedFile.state != .modified else {
-                throw FileEditorError.fileNotSaved
-            }
-            castedFile.state = .opened
-            castedFile.dataStore = [:]
-            return castedFile
+        guard let file = files[name, default: File(name: name, editor: self)] as? File else {
+            throw FileEditorError.fileTypeMismatch
         }
-        
-        let file = File(name: name, editor: self)
-        files[name] = file
-        file.state = .opened
+        switch file.state {
+        case .none, .read, .saved, .closed:
+            file.state = .opened
+            file.dataStore = [:]
+            files[name] = file
+        case .opened:
+            // already opened noop
+            ()
+        case .modified:
+            throw FileEditorError.fileNotSaved
+        case .deleted:
+            throw FileEditorError.fileIsDeleted
+        }
         return file
     }
     
     func closeFile<File: SIFile>(_ file: File) async throws {
-        guard file.state != .modified else { throw FileEditorError.fileNotSaved }
-        file.dataStore = [:]
-        file.state = .closed
-        files[file.name] = nil
+        switch file.state {
+        case .none, .opened, .read, .saved:
+            file.dataStore = [:]
+            file.state = .closed
+            file.modifiedDate = nil
+            files[file.name] = nil
+        case .modified:
+            throw FileEditorError.fileNotSaved
+        case .closed:
+            // NOOP
+            ()
+        case .deleted:
+            throw FileEditorError.fileIsDeleted
+        }
     }
     
     nonisolated func readFile<File: SIFile>(_ file: File) throws {
-        guard file.state != .modified else { throw FileEditorError.fileNotSaved }
-        let data = try DependencyManager.shared.fileSystemManager.readFile(name: file.name)
-        file.dataStore = try file.from(data: data)
-        file.state = .read
+        switch file.state {
+        case .none:
+            throw FileEditorError.fileStateIsUndefined
+        case .opened, .read, .saved:
+            guard let modifiedDateOnDisk = try DependencyManager.shared.fileSystemManager.getModifiedDate(name: file.name) else {
+                throw FileEditorError.unableToGetModifiedDate
+            }
+            if let modifiedDate = file.modifiedDate {
+                if modifiedDate == modifiedDateOnDisk {
+                    // no updates
+                    return
+                } else {
+                    // file on disk diveged
+                    // notify file and read data from disk
+                }
+            } else {
+                // file was never read
+                let data = try DependencyManager.shared.fileSystemManager.readFile(name: file.name)
+                file.dataStore = try file.from(data: data)
+                file.state = .read
+                file.modifiedDate = modifiedDateOnDisk
+            }
+        case .modified:
+            throw FileEditorError.fileNotSaved
+        case .closed:
+            throw FileEditorError.fileIsClosed
+        case .deleted:
+            throw FileEditorError.fileIsDeleted
+        }
     }
     
     func saveFile<File: SIFile>(_ file: File) async throws {
-        guard file.state == .modified else { return }
-        let data = try file.toData(fieldsStore: file.dataStore)
-        try DependencyManager.shared.fileSystemManager.writeFile(name: file.name, data: data)
-        file.state = .saved
+        switch file.state {
+        case .none:
+            throw FileEditorError.fileStateIsUndefined
+        case .opened, .read, .saved:
+            // NOOP
+            ()
+        case .modified:
+            // TODO: check modified date
+            let data = try file.toData(fieldsStore: file.dataStore)
+            try DependencyManager.shared.fileSystemManager.writeFile(name: file.name, data: data)
+            file.state = .saved
+        case .closed:
+            throw FileEditorError.fileIsClosed
+        case .deleted:
+            throw FileEditorError.fileIsDeleted
+        }
     }
     
     func createFile<File: SIFile>(name: String) async throws -> File {
-        let file = File(name: name, editor: self)
+        let file: File = try await openFile(name: name)
         let data = try file.toData(fieldsStore: file.dataStore)
         try DependencyManager.shared.fileSystemManager.createFile(name: name, data: data)
-        file.state = .created
-        files[file.name] = file
         return file
     }
     

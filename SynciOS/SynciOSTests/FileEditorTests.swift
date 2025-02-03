@@ -144,7 +144,6 @@ final class FileEditorTests {
     @Test func openModifiedFile() async throws {
         let name = UUID().uuidString + ".json"
         var note: Note = try await editor.createFile(name: name)
-        note = try await editor.openFile(file: note)
         note.contents = "New Content"
         
         var returnedError: Error?
