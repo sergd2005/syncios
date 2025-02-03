@@ -78,7 +78,7 @@ class SIFile {
         fatalError("should be overriden")
     }
     
-    func open() async throws -> Self? {
+    func open() async throws {
         try await editor?.openFile(file: self)
     }
     
@@ -133,7 +133,7 @@ class SIFieldValue {
 }
 
 protocol FileEditingProvider: AnyObject {
-    func openFile<File: SIFile>(file: File) async throws -> File
+    func openFile<File: SIFile>(file: File) async throws
     func openFile<File: SIFile>(name: String) async throws -> File
     func closeFile<File: SIFile>(_ file: File) async throws
     func readFile<File: SIFile>(_ file: File) async throws
@@ -155,19 +155,12 @@ enum FileEditorError: Error {
 actor FileEditor: FileEditingProvider {
     private var files = [String: SIFile]()
     
-    func openFile<File: SIFile>(file: File) async throws -> File {
-        try await openFile(name: file.name)
-    }
-    
-    func openFile<File: SIFile>(name: String) async throws -> File {
-        guard let file = files[name, default: File(name: name, editor: self)] as? File else {
-            throw FileEditorError.fileTypeMismatch
-        }
+    func openFile<File: SIFile>(file: File) async throws {
         switch file.state {
         case .none, .read, .saved, .closed:
             file.state = .opened
             file.dataStore = [:]
-            files[name] = file
+            files[file.name] = file
         case .opened:
             // already opened noop
             ()
@@ -176,6 +169,13 @@ actor FileEditor: FileEditingProvider {
         case .deleted:
             throw FileEditorError.fileIsDeleted
         }
+    }
+    
+    func openFile<File: SIFile>(name: String) async throws -> File {
+        guard let file = files[name, default: File(name: name, editor: self)] as? File else {
+            throw FileEditorError.fileTypeMismatch
+        }
+        try await openFile(file: file)
         return file
     }
     
@@ -185,7 +185,6 @@ actor FileEditor: FileEditingProvider {
             file.dataStore = [:]
             file.state = .closed
             file.modifiedDate = nil
-            files[file.name] = nil
         case .modified:
             throw FileEditorError.fileNotSaved
         case .closed:

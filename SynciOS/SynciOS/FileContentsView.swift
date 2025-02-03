@@ -8,19 +8,21 @@ import SwiftUI
 
 struct FileContentsView: View {
     @State private var saving: Bool = false
-    @ObservedObject private var fileContentsViewModel: FileContentsViewModel
+    @ObservedObject private var viewModel: FileContentsViewModel
     
     init(fileContentsViewModel: FileContentsViewModel) {
-        self.fileContentsViewModel = fileContentsViewModel
+        self.viewModel = fileContentsViewModel
     }
     
     var body: some View {
         ZStack {
             VStack {
-                TextField(
-                    "Contents",
-                    text: $fileContentsViewModel.contents
-                )
+                HStack {
+                    Text("Contents")
+                    //                    .frame(maxHeight: .infinity, alignment: .topLeading)
+                    TextField("", text: $viewModel.contents)
+                    //                    .frame(maxHeight: .infinity, alignment: .topLeading)
+                }
                 Spacer()
             }
             if saving {
@@ -28,22 +30,23 @@ struct FileContentsView: View {
             }
         }
         .padding()
-        .navigationTitle(fileContentsViewModel.name)
+        .navigationTitle(viewModel.name)
         .toolbar {
-            if fileContentsViewModel.modified {
+            if viewModel.modified {
                 Button("Save") {
                     saving = true
                     Task {
-                        try await fileContentsViewModel.note.save()
+                        try await viewModel.note.save()
                         saving = false
                     }
                 }
             }
         }
+        .onAppear {
+            viewModel.didAppear()
+        }
         .onDisappear {
-            Task {
-                try await fileContentsViewModel.note.close()
-            }
+            viewModel.didDisappear()
         }
     }
 }
