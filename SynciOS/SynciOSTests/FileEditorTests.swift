@@ -87,7 +87,7 @@ final class FileEditorTests {
         try await editor.deleteFile(note)
     }
     
-    @Test func readModified() async throws {
+    @Test func readModifiedInMemory() async throws {
         let name = UUID().uuidString + ".json"
         let note: Note = try await editor.createFile(name: name)
         try await note.read()
@@ -97,14 +97,8 @@ final class FileEditorTests {
             try await editor.readFile(note)
         } catch(let error) {
             returnedError = error
-            switch error {
-            case is FileEditorError:
-                #expect(error as! FileEditorError == .fileNotSaved)
-            default:
-                assertionFailure(error.localizedDescription)
-            }
         }
-        #expect(returnedError != nil)
+        #expect(returnedError == nil)
         #expect(note.state == .modified)
         #expect(note.contents == "Some content")
         try await note.save()

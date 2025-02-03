@@ -10,12 +10,12 @@ import Foundation
 typealias SIFileDataStore = [String: Any]
 
 protocol SIFileDelegate: AnyObject {
-    func fileChagned<File: SIFile>(_ file: File)
+    func fileChangedOnDisk<File: SIFile>(_ file: File)
     func fileStateChanged<File: SIFile>(_ file: File)
 }
 
 extension SIFileDelegate {
-    func fileChagned<File: SIFile>(_ file: File) {}
+    func fileChangedOnDisk<File: SIFile>(_ file: File) {}
     func fileStateChanged<File: SIFile>(_ file: File) {}
 }
 
@@ -200,7 +200,7 @@ actor FileEditor: FileEditingProvider {
         switch file.state {
         case .none:
             throw FileEditorError.fileStateIsUndefined
-        case .opened, .read, .saved:
+        case .opened, .read, .saved, .modified:
             guard let modifiedDateOnDisk = try DependencyManager.shared.fileSystemManager.getModifiedDate(name: file.name) else {
                 throw FileEditorError.unableToGetModifiedDate
             }
@@ -212,10 +212,12 @@ actor FileEditor: FileEditingProvider {
                 file.dataStore = try file.from(data: data)
                 file.state = .read
                 file.modifiedDate = modifiedDateOnDisk
-                file.delegate?.fileChagned(file)
+                if file.state == .modified {
+                  // TODO: notify about conflict
+                } else {
+                    file.delegate?.fileChangedOnDisk(file)
+                }
             }
-        case .modified:
-            throw FileEditorError.fileNotSaved
         case .closed:
             throw FileEditorError.fileIsClosed
         case .deleted:
