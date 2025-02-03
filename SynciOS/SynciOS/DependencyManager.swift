@@ -11,14 +11,18 @@ protocol DependencyProviding {
     var fileEditor: FileEditingProvider { get }
 }
 
-final class DependencyProvider: DependencyProviding {
+final class DefaultDependencyProvider: DependencyProviding {
     let fileSystemManager: FileSystemProviding
     let pathsManager: PathsProviding
     let fileEditor: FileEditingProvider
     
-    init() throws {
+    init() {
         pathsManager = PathsManager()
-        fileSystemManager = try FileSystemManager(folderURL: pathsManager.localURL)
+        do {
+            fileSystemManager = try FileSystemManager(folderURL: pathsManager.localURL)
+        } catch (let error) {
+            fatalError(error.localizedDescription)
+        }
         fileEditor = FileEditor()
     }
 }
@@ -40,12 +44,8 @@ final class DependencyManager {
     
     var dependencyProvider: DependencyProviding
     
-    private init() {
-        do {
-            try dependencyProvider = DependencyProvider()
-        } catch (let error) {
-            fatalError(error.localizedDescription)
-        }
+    init(dependencyProvider: DependencyProviding = DefaultDependencyProvider()) {
+        self.dependencyProvider = dependencyProvider
     }
 }
 

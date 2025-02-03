@@ -31,13 +31,13 @@ final class Note: SIFile {
         }
     }
     
-    override func toData(fieldsStore: [String: Any]) throws -> Data {
+    override func toData(dataStore: SIFileDataStore) throws -> Data {
         // TODO: move to SIFile generic implementation
-        let dict = (fieldsStore.isEmpty == true ? [NoteFields.contents.rawValue : "", NoteFields.comment.rawValue : ""] : fieldsStore)
+        let dict = (dataStore.isEmpty == true ? [NoteFields.contents.rawValue : "", NoteFields.comment.rawValue : ""] : dataStore)
         return try JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
     }
     
-    override func from(data: Data) throws -> [String: Any] {
+    override func from(data: Data) throws -> SIFileDataStore {
         let object = try JSONSerialization.jsonObject(with: data, options: .allowFragments)
         guard let castedObject = object as? [String: Any] else { throw NoteError.failedToCastDataObject }
         return castedObject

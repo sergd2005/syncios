@@ -8,24 +8,14 @@
 import SwiftUI
 import CoreData
 
-struct FileContentsView: View {
-    let fileViewModel: NoteViewModel
-    
-    var body: some View {
-        VStack {
-            Text(fileViewModel.contents ?? "")
-        }
-    }
-}
-
-struct ContentView: View {
-    @State var noteViewModels: [NoteViewModel] = []
+struct FileListView: View {
+    @State var noteViewModels: [FileListViewModel] = []
     
     var body: some View {
         NavigationView {
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(noteViewModels) { noteViewModel in
-                    NavigationLink(destination: FileContentsView(fileViewModel: noteViewModel)) {
+                    NavigationLink(destination: FileContentsView(fileContentsViewModel: FileContentsViewModel(note: noteViewModel.note))) {
                         HStack {
                             Text(noteViewModel.name)
                             Button(action: {
@@ -67,16 +57,12 @@ struct ContentView: View {
         Task {
             noteViewModels.removeAll()
             for filename in try DependencyManager.shared.fileEditor.allFileNames() {
-                noteViewModels.append(NoteViewModel(note: try await DependencyManager.shared.fileEditor.openFile(name: filename)))
+                noteViewModels.append(FileListViewModel(note: try await DependencyManager.shared.fileEditor.openFile(name: filename)))
             }
         }
     }
 }
 
 #Preview {
-    ContentView()
+    FileListView()
 }
-
-//#Preview {
-//    FileContentsView(fileViewModel: NoteViewModel(note: ))
-//}
