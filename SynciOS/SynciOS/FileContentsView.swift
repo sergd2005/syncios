@@ -16,11 +16,31 @@ struct FileContentsView: View {
     
     var body: some View {
         ZStack {
-            VStack {
+            VStack(alignment: .leading) {
+                if viewModel.isInConflict {
+                    Text("Merge \"Contents\" field")
+                }
                 HStack {
-                    Text("Contents:")
+                    Text(viewModel.isInConflict ? "Current:" : "Contents:")
                     TextField("", text: $viewModel.contents)
-                        .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(.roundedBorder)
+                            .disabled(viewModel.isInConflict)
+                    if viewModel.isInConflict {
+                        Button("✅") {
+                            viewModel.note.resolveWithCurrent()
+                        }
+                    }
+                }
+                if viewModel.isInConflict {
+                    HStack {
+                        Text("Incoming:")
+                        TextField("", text: $viewModel.incomingContents)
+                            .textFieldStyle(.roundedBorder)
+                            .disabled(true)
+                        Button("⬆️") {
+                            viewModel.note.resolveWithIncoming()
+                        }
+                    }
                 }
                 Spacer()
             }

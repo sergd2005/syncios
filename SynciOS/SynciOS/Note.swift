@@ -31,6 +31,15 @@ final class Note: SIFile {
         }
     }
     
+    var incomingContents: String? {
+        get {
+            incomingField(for: NoteFields.contents.rawValue)
+        }
+        set {
+            setIncomingField(value: newValue, for: NoteFields.contents.rawValue)
+        }
+    }
+    
     override func toData(dataStore: SIFileDataStore) throws -> Data {
         // TODO: move to SIFile generic implementation
         let dict = (dataStore.isEmpty == true ? [NoteFields.contents.rawValue : "", NoteFields.comment.rawValue : ""] : dataStore)

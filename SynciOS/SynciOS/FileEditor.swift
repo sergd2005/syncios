@@ -26,6 +26,7 @@ class SIFile {
         case read
         case modified
         case saved
+        case conflict
         case unloaded
         case closed
         case deleted
@@ -45,6 +46,7 @@ class SIFile {
     
     weak var delegate: SIFileDelegate?
     fileprivate let fileStorage: SIFileStorage
+    fileprivate(set) var incomingFileStorage: SIFileStorage?
     
     required init(name: String, fileStorage: SIFileStorage, editor: FileEditingProvider) {
         self.name = name
@@ -62,6 +64,14 @@ class SIFile {
     
     func setField<T>(value: T?, for key: String) {
         fileStorage.setField(value: value, for: key)
+    }
+    
+    func incomingField<T>(for key: String) -> T? {
+        incomingFileStorage?.field(for: key)
+    }
+    
+    func setIncomingField<T>(value: T?, for key: String) {
+        incomingFileStorage?.setField(value: value, for: key)
     }
     
     func toData(dataStore: SIFileDataStore) throws -> Data {
@@ -94,6 +104,17 @@ class SIFile {
     
     func unload() async throws {
         try await editor?.unloadFile(self)
+    }
+    
+    func resolveWithIncoming() {
+        guard let incomingFileStorage else { return }
+        fileStorage.dataStore = incomingFileStorage.dataStore
+        state = .modified
+    }
+    
+    func resolveWithCurrent() {
+        incomingFileStorage = nil
+        state = .modified
     }
 }
 
@@ -146,7 +167,7 @@ class SIFieldValue {
         set {
             guard let file = fileStorage?.file else { return }
             switch file.state {
-            case .none, .opened, .closed, .deleted, .unloaded:
+            case .none, .opened, .closed, .deleted, .unloaded, .conflict:
                 ()
             case .read, .saved, .modified:
                 file.state = .modified
@@ -176,6 +197,7 @@ enum FileEditorError: Error {
     case fileIsClosed
     case fileIsDeleted
     case unableToGetModifiedDate
+    case fileIsInConflict
 }
 
 actor FileEditor: FileEditingProvider {
@@ -189,6 +211,8 @@ actor FileEditor: FileEditingProvider {
         case .opened:
             // already opened noop
             ()
+        case .conflict:
+            throw FileEditorError.fileIsInConflict
         case .modified:
             throw FileEditorError.fileNotSaved
         case .deleted:
@@ -216,6 +240,8 @@ actor FileEditor: FileEditingProvider {
         case .unloaded:
             // NOOP
             ()
+        case .conflict:
+            throw FileEditorError.fileIsInConflict
         case .deleted:
             throw FileEditorError.fileIsDeleted
         }
@@ -239,16 +265,19 @@ actor FileEditor: FileEditingProvider {
             if let modifiedDate = file.modifiedDate, modifiedDate == modifiedDateOnDisk  {
                 return
             } else {
-                // file was never read
                 let data = try DependencyManager.shared.fileSystemManager.readFile(name: file.name)
                 if file.state == .modified {
                   // TODO: notify about conflict
+                    file.incomingFileStorage = SIFileStorage(file: file, dataStore: try file.from(data: data))
+                    file.state = .conflict
                 } else {
                     file.fileStorage.dataStore = try file.from(data: data)
                     file.modifiedDate = modifiedDateOnDisk
                     file.state = .read
                 }
             }
+        case .conflict:
+            throw FileEditorError.fileIsInConflict
         case .closed:
             throw FileEditorError.fileIsClosed
         case .deleted:
@@ -274,6 +303,8 @@ actor FileEditor: FileEditingProvider {
             file.state = .saved
         case .closed:
             throw FileEditorError.fileIsClosed
+        case .conflict:
+            throw FileEditorError.fileIsInConflict
         case .deleted:
             throw FileEditorError.fileIsDeleted
         }

@@ -177,7 +177,7 @@ final class FileEditorTests {
         #expect(note.state == .deleted)
     }
     
-    @Test func modifyFileAndReadWhileModified() async throws {
+    @Test func resolveWithIncoming() async throws {
         let name = UUID().uuidString + ".json"
         let note: Note = try await editor.createFile(name: name)
         try await note.read()
@@ -188,6 +188,33 @@ final class FileEditorTests {
         try DependencyManager.shared.fileSystemManager.writeFile(name: name, data: data)
         try await note.read()
         // TODO: should conflict state
+        #expect(note.state == .conflict)
+        #expect(note.contents == "New Content")
+        #expect(note.incomingContents == "testdata")
+        note.resolveWithIncoming()
+        #expect(note.state == .modified)
+        #expect(note.contents == "testdata")
+        try await editor.saveFile(note)
+        #expect(note.state == .saved)
+        try await editor.deleteFile(note)
+        #expect(note.state == .deleted)
+    }
+    
+    @Test func resolveWithCurrent() async throws {
+        let name = UUID().uuidString + ".json"
+        let note: Note = try await editor.createFile(name: name)
+        try await note.read()
+        note.contents = "New Content"
+        #expect(note.state == .modified)
+        #expect(note.contents == "New Content")
+        let data = try JSONSerialization.data(withJSONObject: [NoteFields.contents.rawValue : "testdata"], options: .prettyPrinted)
+        try DependencyManager.shared.fileSystemManager.writeFile(name: name, data: data)
+        try await note.read()
+        // TODO: should conflict state
+        #expect(note.state == .conflict)
+        #expect(note.contents == "New Content")
+        #expect(note.incomingContents == "testdata")
+        note.resolveWithCurrent()
         #expect(note.state == .modified)
         #expect(note.contents == "New Content")
         try await editor.saveFile(note)

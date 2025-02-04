@@ -42,7 +42,17 @@ final class FileContentsViewModel: Identifiable, ObservableObject {
         }
     }
     
+    var incomingContents: String {
+        get {
+            note.incomingContents ?? ""
+        }
+        set {
+            return
+        }
+    }
+    
     @Published var modified: Bool = false
+    @Published var isInConflict: Bool = false
 }
 
 extension String {
@@ -78,6 +88,7 @@ extension FileContentsViewModel: SIFileDelegate {
 //            case .unloaded:
 //                ()
 //            }
+            isInConflict = file.state == .conflict
             modified = file.state == .modified
         }
     }
