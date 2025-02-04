@@ -18,19 +18,6 @@ struct FileListView: View {
                     NavigationLink(destination: FileContentsView(fileContentsViewModel: FileContentsViewModel(note: noteViewModel.note))) {
                         HStack {
                             Text(noteViewModel.name)
-                            Button(action: {
-                                Task {
-                                    do {
-                                        _ = try await DependencyManager.shared.fileEditor.deleteFile(noteViewModel.note)
-                                        refreshFiles()
-                                    } catch(let error) {
-                                        print(error)
-                                    }
-                                }
-                            }) {
-                                Label("",systemImage: "trash")
-                                    .tint(.red)
-                            }
                         }
                     }
                 }
@@ -39,14 +26,6 @@ struct FileListView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .navigationTitle("Files")
-            .toolbar {
-                Button("Add") {
-                    Task {
-                        _ = try await DependencyManager.shared.fileEditor.createFile(name: "New File.json") as Note
-                        refreshFiles()
-                    }
-                }
-            }
         }
         .onAppear() {
             refreshFiles()
