@@ -67,8 +67,10 @@ struct FileContentsView: View {
                     viewModel.save()
                 }
             }
-            Button("Reload") {
-                viewModel.read()
+            Button("Sync") {
+                Task {
+                    try await DependencyManager.shared.storageCoordinationProviding.sync()
+                }
             }
         }
         .onAppear {

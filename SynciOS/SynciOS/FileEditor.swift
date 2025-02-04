@@ -208,6 +208,7 @@ protocol FileEditingProvider: AnyObject {
     func deleteFile<File: SIFile>(_ file: File) async throws
     func unloadFile<File: SIFile>(_ file: File) async throws
     func allFileNames() throws -> [String]
+    func files(with state: SIFile.State) async -> [SIFile]
 }
 
 enum FileEditorError: Error {
@@ -384,5 +385,11 @@ actor FileEditor: FileEditingProvider {
     
     nonisolated func allFileNames() throws -> [String] {
         try DependencyManager.shared.fileSystemManager.allFileNames()
+    }
+    
+    func files(with state: SIFile.State) async -> [SIFile] {
+        files.filter { (key: String, value: SIFile) in
+            value.state == state
+        }.map { $1 }
     }
 }

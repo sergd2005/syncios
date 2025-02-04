@@ -111,6 +111,7 @@ extension FileContentsViewModel {
     func save() {
         Task {
             try await self.note.save()
+            try await DependencyManager.shared.storageCoordinationProviding.commit(message: "Saving \(note.name) at \(Date())")
         }
     }
 }

@@ -9,17 +9,23 @@ protocol DependencyProviding {
     var fileSystemManager: FileSystemProviding { get }
     var pathsManager: PathsProviding { get }
     var fileEditor: FileEditingProvider { get }
+    var gitProviding: GitProviding { get }
+    var storageCoordinationProviding: StorageCoordinationProviding { get }
 }
 
 final class DefaultDependencyProvider: DependencyProviding {
     let fileSystemManager: FileSystemProviding
     let pathsManager: PathsProviding
     let fileEditor: FileEditingProvider
+    let gitProviding: GitProviding
+    let storageCoordinationProviding: StorageCoordinationProviding
     
     init() {
         pathsManager = PathsManager()
+        storageCoordinationProviding = StorageCoordinator()
         do {
             fileSystemManager = try FileSystemManager(folderURL: pathsManager.localURL)
+            gitProviding = try GitFileSystem()
         } catch (let error) {
             fatalError(error.localizedDescription)
         }
@@ -31,11 +37,21 @@ final class MockDependencyProvider: DependencyProviding {
     let fileSystemManager: FileSystemProviding
     let pathsManager: PathsProviding
     let fileEditor: FileEditingProvider
+    let gitProviding: GitProviding
+    let storageCoordinationProviding: StorageCoordinationProviding
     
     init(fileSystemManager: FileSystemProviding, pathsManager: PathsProviding, fileEditor: FileEditingProvider) throws {
         self.fileSystemManager = fileSystemManager
         self.pathsManager = pathsManager
         self.fileEditor = fileEditor
+        // TODO: init with mock
+        self.storageCoordinationProviding = StorageCoordinator()
+        do {
+            // TODO: init with mock
+            gitProviding = try GitFileSystem()
+        } catch (let error) {
+            fatalError(error.localizedDescription)
+        }
     }
 }
 
@@ -50,6 +66,11 @@ final class DependencyManager {
 }
 
 extension DependencyManager: DependencyProviding {
+    
+    var gitProviding: any GitProviding {
+        dependencyProvider.gitProviding
+    }
+    
     var fileSystemManager: any FileSystemProviding {
         dependencyProvider.fileSystemManager
     }
@@ -60,5 +81,9 @@ extension DependencyManager: DependencyProviding {
     
     var fileEditor: any FileEditingProvider {
         dependencyProvider.fileEditor
+    }
+    
+    var storageCoordinationProviding: any StorageCoordinationProviding {
+        dependencyProvider.storageCoordinationProviding
     }
 }

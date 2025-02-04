@@ -55,6 +55,7 @@ struct FileListView: View {
     
     func refreshFiles() {
         Task {
+            try await DependencyManager.shared.storageCoordinationProviding.sync()
             noteViewModels.removeAll()
             for filename in try DependencyManager.shared.fileEditor.allFileNames() {
                 noteViewModels.append(FileListViewModel(note: try await DependencyManager.shared.fileEditor.openFile(name: filename)))
