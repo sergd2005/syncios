@@ -18,10 +18,9 @@ struct FileContentsView: View {
         ZStack {
             VStack {
                 HStack {
-                    Text("Contents")
-                    //                    .frame(maxHeight: .infinity, alignment: .topLeading)
+                    Text("Contents:")
                     TextField("", text: $viewModel.contents)
-                    //                    .frame(maxHeight: .infinity, alignment: .topLeading)
+                        .textFieldStyle(.roundedBorder)
                 }
                 Spacer()
             }
@@ -34,25 +33,26 @@ struct FileContentsView: View {
         .toolbar {
             if viewModel.modified {
                 Button("Save") {
-                    saving = true
-                    Task {
-                        try await viewModel.note.save()
-                        saving = false
-                    }
+                    viewModel.save()
                 }
+            }
+            Button("Reload") {
+                viewModel.read()
             }
         }
         .onAppear {
-            viewModel.didAppear()
+            viewModel.read()
         }
         .onDisappear {
-            viewModel.didDisappear()
+            viewModel.unload()
         }
     }
 }
 
 #Preview {
     NavigationView {
-        FileContentsView(fileContentsViewModel: FileContentsViewModel(note: Note(name: "Preview.json", editor: DependencyManager.shared.fileEditor)))
+        FileContentsView(fileContentsViewModel: FileContentsViewModel(note: Note(name: "Preview.json",
+                                                                                 fileStorage: SIFileStorage(),
+                                                                                 editor: DependencyManager.shared.fileEditor)))
     }
 }

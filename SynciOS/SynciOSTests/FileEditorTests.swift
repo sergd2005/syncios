@@ -107,7 +107,7 @@ final class FileEditorTests {
     
     @Test func modifyFileSaveCloseAndOpen() async throws {
         let name = UUID().uuidString + ".json"
-        var note: Note = try await editor.createFile(name: name)
+        let note: Note = try await editor.createFile(name: name)
         #expect(note.state == .opened)
         try await note.read()
         #expect(note.contents == "")
@@ -118,7 +118,7 @@ final class FileEditorTests {
         try await note.close()
         #expect(note.state == .closed)
         #expect(note.contents == nil)
-        note = try await editor.openFile(file: note)
+        try await editor.openFile(file: note)
         #expect(note.state == .opened)
         try await note.read()
         #expect(note.contents == "Modified contents")
@@ -128,20 +128,20 @@ final class FileEditorTests {
     
     @Test func deleteFile() async throws {
         let name = UUID().uuidString + ".json"
-        var note: Note = try await editor.createFile(name: name)
+        let note: Note = try await editor.createFile(name: name)
         try await editor.deleteFile(note)
         #expect(note.state == .deleted)
     }
     
     @Test func openModifiedFile() async throws {
         let name = UUID().uuidString + ".json"
-        var note: Note = try await editor.createFile(name: name)
+        let note: Note = try await editor.createFile(name: name)
         try await note.read()
         note.contents = "New Content"
         
         var returnedError: Error?
         do {
-            note = try await editor.openFile(file: note)
+            try await editor.openFile(file: note)
         } catch(let error) {
             returnedError = error
             switch error {
@@ -156,6 +156,59 @@ final class FileEditorTests {
         #expect(note.state == .modified)
         try await editor.saveFile(note)
         #expect(note.state == .saved)
+        try await editor.deleteFile(note)
+        #expect(note.state == .deleted)
+    }
+    
+    @Test func readModifiedFile() async throws {
+        let name = UUID().uuidString + ".json"
+        let note: Note = try await editor.createFile(name: name)
+        try await note.read()
+        note.contents = "New Content"
+        try await editor.saveFile(note)
+        
+        note.contents = "New Content2"
+        try await note.read()
+        #expect(note.state == .modified)
+        #expect(note.contents == "New Content2")
+        try await editor.saveFile(note)
+        #expect(note.state == .saved)
+        try await editor.deleteFile(note)
+        #expect(note.state == .deleted)
+    }
+    
+    @Test func modifyFileAndReadWhileModified() async throws {
+        let name = UUID().uuidString + ".json"
+        let note: Note = try await editor.createFile(name: name)
+        try await note.read()
+        note.contents = "New Content"
+        #expect(note.state == .modified)
+        #expect(note.contents == "New Content")
+        let data = try JSONSerialization.data(withJSONObject: [NoteFields.contents.rawValue : "testdata"], options: .prettyPrinted)
+        try DependencyManager.shared.fileSystemManager.writeFile(name: name, data: data)
+        try await note.read()
+        // TODO: should conflict state
+        #expect(note.state == .modified)
+        #expect(note.contents == "New Content")
+        try await editor.saveFile(note)
+        #expect(note.state == .saved)
+        try await editor.deleteFile(note)
+        #expect(note.state == .deleted)
+    }
+    
+    @Test func modifyFileSaveAndReadWhileModified() async throws {
+        let name = UUID().uuidString + ".json"
+        let note: Note = try await editor.createFile(name: name)
+        try await note.read()
+        note.contents = "New Content"
+        try await editor.saveFile(note)
+        #expect(note.state == .saved)
+        #expect(note.contents == "New Content")
+        let data = try JSONSerialization.data(withJSONObject: [NoteFields.contents.rawValue : "testdata"], options: .prettyPrinted)
+        try DependencyManager.shared.fileSystemManager.writeFile(name: name, data: data)
+        try await note.read()
+        #expect(note.state == .read)
+        #expect(note.contents == "testdata")
         try await editor.deleteFile(note)
         #expect(note.state == .deleted)
     }

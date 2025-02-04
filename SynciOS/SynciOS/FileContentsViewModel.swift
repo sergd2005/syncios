@@ -37,6 +37,7 @@ final class FileContentsViewModel: Identifiable, ObservableObject {
             note.contents ?? ""
         }
         set {
+            guard note.contents != newValue else { return }
             note.contents = newValue
         }
     }
@@ -57,40 +58,47 @@ extension String {
 extension FileContentsViewModel: SIFileDelegate {
     func fileStateChanged<File: SIFile>(_ file: File) {
         Task { @MainActor in
-            switch file.state {
-            case .none:
-                ()
-            case .opened:
-                ()
-            case .read:
-                ()
-//                name = note.name
-//                contents = note.contents ?? ""
-            case .modified:
-                ()
-            case .saved:
-                ()
-            case .closed:
-                ()
-            case .deleted:
-                ()
-            }
+//            switch file.state {
+//            case .none:
+//                ()
+//            case .opened:
+//                ()
+//            case .read:
+//                ()
+////                name = note.name
+////                contents = note.contents ?? ""
+//            case .modified:
+//                ()
+//            case .saved:
+//                ()
+//            case .closed:
+//                ()
+//            case .deleted:
+//                ()
+//            case .unloaded:
+//                ()
+//            }
             modified = file.state == .modified
         }
     }
 }
 
-extension FileContentsViewModel: ViewAppearanceProviding {
-    func didAppear() {
+extension FileContentsViewModel {
+    func read() {
         Task {
-            try await self.note.open()
             try await self.note.read()
         }
     }
     
-    func didDisappear() {
+    func unload() {
         Task {
-            try await self.note.close()
+            try await self.note.unload()
+        }
+    }
+    
+    func save() {
+        Task {
+            try await self.note.save()
         }
     }
 }
