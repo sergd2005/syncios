@@ -34,7 +34,7 @@ struct FileContentsView: View {
                 if viewModel.isInConflict {
                     if viewModel.isTwoWayConflict {
                         HStack {
-                            Text("On Disk:")
+                            Text("Current On Disk:")
                             TextField("", text: $viewModel.contentsOnDisk)
                                 .textFieldStyle(.roundedBorder)
                                 .disabled(true)
@@ -44,7 +44,7 @@ struct FileContentsView: View {
                         }
                     }
                     HStack {
-                        Text("Incoming:")
+                        Text(viewModel.isTwoWayConflict ? "Incoming On Disk:" : "Incoming:")
                         TextField("", text: $viewModel.incomingContents)
                             .textFieldStyle(.roundedBorder)
                             .disabled(true)
