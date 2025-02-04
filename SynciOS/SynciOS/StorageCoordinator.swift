@@ -13,7 +13,7 @@ protocol StorageCoordinationProviding {
 final class StorageCoordinator: StorageCoordinationProviding {
     
     func sync() async throws {
-        try await DependencyManager.shared.gitProviding.syncData()
+//        try await DependencyManager.shared.gitProviding.syncData()
         for file in await DependencyManager.shared.fileEditor.files(with: .read) {
             try await file.read()
         }
