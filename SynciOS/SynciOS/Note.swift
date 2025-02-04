@@ -31,6 +31,15 @@ final class Note: SIFile {
         }
     }
     
+    var contentsOnDisk: String? {
+        get {
+            currentFileField(for: NoteFields.contents.rawValue)
+        }
+        set {
+            setCurrentFileField(value: newValue, for: NoteFields.contents.rawValue)
+        }
+    }
+    
     var incomingContents: String? {
         get {
             incomingField(for: NoteFields.contents.rawValue)

@@ -32,12 +32,23 @@ struct FileContentsView: View {
                     }
                 }
                 if viewModel.isInConflict {
+                    if viewModel.isTwoWayConflict {
+                        HStack {
+                            Text("On Disk:")
+                            TextField("", text: $viewModel.contentsOnDisk)
+                                .textFieldStyle(.roundedBorder)
+                                .disabled(true)
+                            Button("✅") {
+                                viewModel.note.resolveWithCurrentOnDisk()
+                            }
+                        }
+                    }
                     HStack {
                         Text("Incoming:")
                         TextField("", text: $viewModel.incomingContents)
                             .textFieldStyle(.roundedBorder)
                             .disabled(true)
-                        Button("⬆️") {
+                        Button("✅") {
                             viewModel.note.resolveWithIncoming()
                         }
                     }

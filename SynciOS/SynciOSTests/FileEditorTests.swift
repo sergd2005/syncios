@@ -239,4 +239,55 @@ final class FileEditorTests {
         try await editor.deleteFile(note)
         #expect(note.state == .deleted)
     }
+    
+    @Test func mergeConflictOnDisk() async throws {
+        let name = UUID().uuidString + ".json"
+        
+        guard let data = "{\n<<<<<<< HEAD\n  \"contents\" : \"1\"\n=======\n  \"contents\" : \"tests\"\n>>>>>>> dc7af96d37cd1fefcd134d63e043c4ea0f9e0c81\n}".data(using: .utf8) else {
+            assertionFailure("failed to parse data")
+            return
+        }
+        
+        try DependencyManager.shared.fileSystemManager.writeFile(name: name, data: data)
+        let note: Note = try await editor.openFile(name: name)
+        try await note.read()
+        #expect(note.state == .conflict)
+        #expect(note.contents == "1")
+        #expect(note.incomingContents == "tests")
+        note.resolveWithCurrent()
+        try await note.save()
+        #expect(note.state == .saved)
+        try await note.unload()
+        #expect(note.state == .unloaded)
+        try await note.read()
+        #expect(note.state == .read)
+        #expect(note.contents == "1")
+        try await note.delete()
+    }
+    
+    @Test func twoWayMergeConflictOnDisk() async throws {
+        let name = UUID().uuidString + ".json"
+        guard let data = "{\n<<<<<<< HEAD\n  \"contents\" : \"1\"\n=======\n  \"contents\" : \"tests\"\n>>>>>>> dc7af96d37cd1fefcd134d63e043c4ea0f9e0c81\n}".data(using: .utf8) else {
+            assertionFailure("failed to parse data")
+            return
+        }
+        let note: Note = try await editor.createFile(name: name)
+        try await note.read()
+        note.contents = "New Content"
+        try DependencyManager.shared.fileSystemManager.writeFile(name: name, data: data)
+        try await note.read()
+        #expect(note.state == .twoWayConflict)
+        #expect(note.contents == "New Content")
+        #expect(note.incomingContents == "tests")
+        #expect(note.contentsOnDisk == "1")
+        note.resolveWithCurrent()
+        try await note.save()
+        #expect(note.state == .saved)
+        try await note.unload()
+        #expect(note.state == .unloaded)
+        try await note.read()
+        #expect(note.state == .read)
+        #expect(note.contents == "New Content")
+        try await note.delete()
+    }
 }

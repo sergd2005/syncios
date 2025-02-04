@@ -27,6 +27,7 @@ class SIFile {
         case modified
         case saved
         case conflict
+        case twoWayConflict
         case unloaded
         case closed
         case deleted
@@ -46,6 +47,7 @@ class SIFile {
     
     weak var delegate: SIFileDelegate?
     fileprivate let fileStorage: SIFileStorage
+    fileprivate(set) var currentFileStorage: SIFileStorage?
     fileprivate(set) var incomingFileStorage: SIFileStorage?
     
     required init(name: String, fileStorage: SIFileStorage, editor: FileEditingProvider) {
@@ -64,6 +66,14 @@ class SIFile {
     
     func setField<T>(value: T?, for key: String) {
         fileStorage.setField(value: value, for: key)
+    }
+    
+    func currentFileField<T>(for key: String) -> T? {
+        currentFileStorage?.field(for: key)
+    }
+    
+    func setCurrentFileField<T>(value: T?, for key: String) {
+        currentFileStorage?.setField(value: value, for: key)
     }
     
     func incomingField<T>(for key: String) -> T? {
@@ -109,11 +119,22 @@ class SIFile {
     func resolveWithIncoming() {
         guard let incomingFileStorage else { return }
         fileStorage.dataStore = incomingFileStorage.dataStore
+        self.incomingFileStorage = nil
+        currentFileStorage = nil
         state = .modified
     }
     
     func resolveWithCurrent() {
         incomingFileStorage = nil
+        currentFileStorage = nil
+        state = .modified
+    }
+    
+    func resolveWithCurrentOnDisk() {
+        guard let currentFileStorage else { return }
+        fileStorage.dataStore = currentFileStorage.dataStore
+        incomingFileStorage = nil
+        self.currentFileStorage = nil
         state = .modified
     }
 }
@@ -167,7 +188,7 @@ class SIFieldValue {
         set {
             guard let file = fileStorage?.file else { return }
             switch file.state {
-            case .none, .opened, .closed, .deleted, .unloaded, .conflict:
+            case .none, .opened, .closed, .deleted, .unloaded, .conflict, .twoWayConflict:
                 ()
             case .read, .saved, .modified:
                 file.state = .modified
@@ -198,6 +219,7 @@ enum FileEditorError: Error {
     case fileIsDeleted
     case unableToGetModifiedDate
     case fileIsInConflict
+    case failedToParseString
 }
 
 actor FileEditor: FileEditingProvider {
@@ -211,7 +233,7 @@ actor FileEditor: FileEditingProvider {
         case .opened:
             // already opened noop
             ()
-        case .conflict:
+        case .conflict, .twoWayConflict:
             throw FileEditorError.fileIsInConflict
         case .modified:
             throw FileEditorError.fileNotSaved
@@ -240,7 +262,7 @@ actor FileEditor: FileEditingProvider {
         case .unloaded:
             // NOOP
             ()
-        case .conflict:
+        case .conflict, .twoWayConflict:
             throw FileEditorError.fileIsInConflict
         case .deleted:
             throw FileEditorError.fileIsDeleted
@@ -254,7 +276,31 @@ actor FileEditor: FileEditingProvider {
         file.state = .closed
     }
     
-    nonisolated func readFile<File: SIFile>(_ file: File) async throws {
+    func parseConflict(_ data: Data) async throws -> (SIFileDataStore, SIFileDataStore) {
+        guard let string = String(data: data, encoding: .utf8) else {
+            throw FileEditorError.failedToParseString
+        }
+        let split = string.components(separatedBy: "<<<<<<< HEAD")
+        guard let currentContent = split[1].components(separatedBy: "=======").first,
+              let incomingContentSplit = split[1].components(separatedBy: "=======").last,
+              let incomingContent = incomingContentSplit.components(separatedBy: ">>>>>>>").first
+        else {
+            throw FileEditorError.failedToParseString
+        }
+        let current = "{" + currentContent + "}"
+        let incoming = "{" + incomingContent + "}"
+        guard let currentData = current.data(using: .utf8),
+              let incomingData = incoming.data(using: .utf8),
+              let jsonDictCurrent = try JSONSerialization.jsonObject(with: currentData, options: .fragmentsAllowed) as? SIFileDataStore,
+              let jsonDictIncoming = try JSONSerialization.jsonObject(with: incomingData, options: .fragmentsAllowed) as? SIFileDataStore
+        else {
+            throw FileEditorError.failedToParseString
+        }
+        
+        return (jsonDictCurrent, jsonDictIncoming)
+    }
+    
+    func readFile<File: SIFile>(_ file: File) async throws {
         switch file.state {
         case .none:
             throw FileEditorError.fileStateIsUndefined
@@ -266,17 +312,30 @@ actor FileEditor: FileEditingProvider {
                 return
             } else {
                 let data = try DependencyManager.shared.fileSystemManager.readFile(name: file.name)
-                if file.state == .modified {
-                  // TODO: notify about conflict
-                    file.incomingFileStorage = SIFileStorage(file: file, dataStore: try file.from(data: data))
-                    file.state = .conflict
+                if let parsedDataStore = try? file.from(data: data) {
+                    if file.state == .modified {
+                        file.incomingFileStorage = SIFileStorage(file: file, dataStore: parsedDataStore)
+                        file.state = .conflict
+                    } else {
+                        file.fileStorage.dataStore = parsedDataStore
+                        file.modifiedDate = modifiedDateOnDisk
+                        file.state = .read
+                    }
                 } else {
-                    file.fileStorage.dataStore = try file.from(data: data)
-                    file.modifiedDate = modifiedDateOnDisk
-                    file.state = .read
+                    let result = try await parseConflict(data)
+                    if file.state == .modified {
+                        file.currentFileStorage = SIFileStorage(file: file, dataStore: result.0)
+                        file.incomingFileStorage = SIFileStorage(file: file, dataStore: result.1)
+                        file.state = .twoWayConflict
+                    } else {
+                        file.fileStorage.dataStore = result.0
+                        file.incomingFileStorage = SIFileStorage(file: file, dataStore: result.1)
+                        file.modifiedDate = modifiedDateOnDisk
+                        file.state = .conflict
+                    }
                 }
             }
-        case .conflict:
+        case .conflict, .twoWayConflict:
             throw FileEditorError.fileIsInConflict
         case .closed:
             throw FileEditorError.fileIsClosed
@@ -303,7 +362,7 @@ actor FileEditor: FileEditingProvider {
             file.state = .saved
         case .closed:
             throw FileEditorError.fileIsClosed
-        case .conflict:
+        case .conflict, .twoWayConflict:
             throw FileEditorError.fileIsInConflict
         case .deleted:
             throw FileEditorError.fileIsDeleted

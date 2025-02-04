@@ -12,19 +12,9 @@ final class FileContentsViewModel: Identifiable, ObservableObject {
     
     init(note: Note) {
         self.note = note
-//        self.name = note.name
         self.contents = ""
         self.note.delegate = self
     }
-    
-//    @Published var name: String
-//    @Published var contents: String {
-//        didSet {
-//            if note.contents != contents {
-//                note.contents = contents
-//            }
-//        }
-//    }
     
     var name: String {
         get {
@@ -42,6 +32,15 @@ final class FileContentsViewModel: Identifiable, ObservableObject {
         }
     }
     
+    var contentsOnDisk: String {
+        get {
+            note.contentsOnDisk ?? ""
+        }
+        set {
+            return
+        }
+    }
+    
     var incomingContents: String {
         get {
             note.incomingContents ?? ""
@@ -53,6 +52,7 @@ final class FileContentsViewModel: Identifiable, ObservableObject {
     
     @Published var modified: Bool = false
     @Published var isInConflict: Bool = false
+    @Published var isTwoWayConflict: Bool = false
 }
 
 extension String {
@@ -88,8 +88,9 @@ extension FileContentsViewModel: SIFileDelegate {
 //            case .unloaded:
 //                ()
 //            }
-            isInConflict = file.state == .conflict
+            isInConflict = (file.state == .conflict || file.state == .twoWayConflict)
             modified = file.state == .modified
+            isTwoWayConflict = file.state == .twoWayConflict
         }
     }
 }
